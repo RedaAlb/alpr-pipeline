@@ -1,0 +1,7 @@
+.vscode
+__pycache__
+yolov3.weights
+yolov3_model.h5
+LP_VT_det_rec/yolov3/yolov3_ml_space/weights
+vcpkg
+checkpoints
