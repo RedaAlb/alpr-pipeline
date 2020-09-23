@@ -1,7 +1,12 @@
 .vscode
 __pycache__
+.ipynb_checkpoints
 yolov3.weights
+yolov4.weights
+yolov4-tiny.weights
 yolov3_model.h5
 LP_VT_det_rec/yolov3/yolov3_ml_space/weights
 vcpkg
 checkpoints
+variables
+saved_model.pb
