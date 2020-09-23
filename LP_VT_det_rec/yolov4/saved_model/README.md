@@ -1,0 +1,1 @@
+When you save a loaded or trained YOLO model, it will be saved in this directory.

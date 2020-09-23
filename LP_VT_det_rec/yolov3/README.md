@@ -1,24 +1,12 @@
-# LP and VT detection and recognition
+# YOLOv3
 
-- This directory is for all the implementation regarding the LP and VT detection and recognition.
+- This directory is for all the implementations of YOLOv3 tested.
 
-
-## General notes
-- [YOLO](https://pjreddie.com/darknet/yolo/) is a central part for this component of the project, and will be the main detection and recognition method used.
-- Since the original YOLO algorithm is implemented using the [DarkNet](https://pjreddie.com/darknet/) framework. There are multiple implementations adapting the same exact YOLO algorithm to the more popular framework TensorFlow.
-- First, to ensure the best and appropriate YOLO TensorFlow implementation is used, mulitple YOLOv3 TensorFlow 2.0+ implementations are tested.
-
-
-## System specification used
-- CPU: i7-7700K<br>
-- GPU: Nvidia GTX 1060 6GB
-
-
-## To run the different YOLO TensorFlow implementations
+## To run the different YOLOv3 TensorFlow implementations
 
 Below is a list of all the implementations tested.
 
-Navigate to one of the YOLO implementations and follow instructions on the corresponding readme file.
+Navigate to one of the YOLO directories and follow instructions on the corresponding readme file.
 
 1. `/yolov3/yolov3_experiencor/`, runs very slow at ~3 FPS. [Original repo](https://github.com/experiencor/keras-yolo3).
 
@@ -33,7 +21,7 @@ For the ALPR, the method that is used as the starting point is this [proposed me
 
 Requirements:
 - Linux system.
-- [Darknet](https://github.com/AlexeyAB/darknet) installed.
+- [Darknet](https://github.com/AlexeyAB/darknet) installed in the `/darknet` directory.
 
 Once Darknet is installed and compiled successfully:
 
