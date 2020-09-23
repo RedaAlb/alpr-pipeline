@@ -47,3 +47,7 @@ Open and run `testing_inference.py`
 ## To test at a lower level and using a webcam in real-time
 
 Open the `testing_yolov4.ipynb` notebook and execute the cells.
+
+Example result:
+
+![result](result_example.jpg)
