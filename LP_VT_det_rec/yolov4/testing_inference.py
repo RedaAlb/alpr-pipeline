@@ -20,7 +20,8 @@ yolo.classes = "test/coco.names"
 yolo.make_model()
 yolo.load_weights("weights/yolov4.weights", weights_type="yolo")
 
-yolo.inference(media_path="test/kite.jpg")
+yolo.inference(media_path="test/motorway.jpg")
+# yolo.inference(media_path="test/kite.jpg")
 # yolo.inference(media_path="test/road.mp4", is_image=False)
 # yolo.inference(media_path=0, is_image=False)
 
@@ -34,6 +35,7 @@ yolo.inference(media_path="test/kite.jpg")
 # yolo.make_model()
 # yolo.load_weights("weights/yolov4-tiny.weights", weights_type="yolo")
 
+# yolo.inference(media_path="test/motorway.jpg")
 # yolo.inference(media_path="test/kite.jpg")
 # yolo.inference(media_path="test/road.mp4", is_image=False)
 # yolo.inference(media_path=0, is_image=False)
