@@ -6,6 +6,7 @@
 - Both YOLOv3 and YOLOv4 are tested.
 - For YOLOv4, refer to the `/yolov4` directory.
 - For YOLOv3, refer to the `/yolov3` directory.
+- For the datasets used, refer to the `/datasets` directory.
 
 
 # System specification used

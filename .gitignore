@@ -10,3 +10,8 @@ vcpkg
 checkpoints
 variables
 saved_model.pb
+# LP_VT_det_rec/yolov4/test/dataset/val2017
+LP_VT_det_rec/yolov4/test/dataset/val2017/*
+LP_VT_det_rec/datasets/*
+!LP_VT_det_rec/datasets/README.md
+!LP_VT_det_rec/datasets/visualise_dataset.ipynb
