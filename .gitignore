@@ -12,6 +12,10 @@ variables
 saved_model.pb
 # LP_VT_det_rec/yolov4/test/dataset/val2017
 LP_VT_det_rec/yolov4/test/dataset/val2017/*
-LP_VT_det_rec/datasets/*
-!LP_VT_det_rec/datasets/README.md
-!LP_VT_det_rec/datasets/visualise_dataset.ipynb
+LP_VT_det_rec/datasets/annotations/
+LP_VT_det_rec/datasets/aolp/
+LP_VT_det_rec/datasets/caltech_cars/
+LP_VT_det_rec/datasets/english_lp/
+LP_VT_det_rec/datasets/open_alpr_eu/
+LP_VT_det_rec/datasets/ufpr_alpr/
+LP_VT_det_rec/datasets/rename_files.py
