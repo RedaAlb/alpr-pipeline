@@ -6,16 +6,16 @@ This directory contains all the datasets used for training, validation, and test
 
 - `datasets_util.py`, used to provide utility functions to operate on the datasets.
 - `visualise_dataset.ipynb`, used to visualise, extract, and check the datasets and the image annotations/labels.
-- `dataset_analysis.ipynb`, will be used to analyse the datasets and give an overview of key metrics.
+- `dataset_analysis.ipynb`, used to analyse the datasets and give an overview of key metrics.
 
 
 | Dataset      | # Samples | Resolution | Country     | Train % | Val % | Test % | Notes | Link                                                                      |
 |--------------|-----------|------------|-------------|---------|-------|--------|------| ---------------------------------------------------------------------------|
-| Caltech Cars | 126      | 896x592  | American |       |     |      | car, rear view | [Link](https://www.robots.ox.ac.uk/~vgg/data/cars_markus/cars_markus.tar) |
+| Caltech Cars | 124      | 896x592  | American |       |     |      | car, rear view | [Link](https://www.robots.ox.ac.uk/~vgg/data/cars_markus/cars_markus.tar) |
 | English LP | 509      | Mixed  | EU  |       |     |      | car/truck, rear view | [Link](http://www.zemris.fer.hr/projects/LicensePlates/english/baza_slika.zip) |
 | OpenALPR EU | 108     | Mixed  | EU  |       |     |      | car, rear/front view | [Link](https://github.com/openalpr/benchmarks/tree/master/endtoend/eu) |
 | AOLP | 2049     | Mixed  | Taiwanese  |       |     |      | cars/motorbikes, r/f | [Link](https://github.com/HaoRecog/AOLP) |
-| UFPR-ALPR | 4500     | 1920x1080  | Brazilian  |       |     |      | cars/motorbikes, rear | [Link](https://web.inf.ufpr.br/vri/databases/ufpr-alpr/license-agreement/) |
+| UFPR-ALPR | 4500     | 1920x1080  | Brazilian  |       |     |      | car/motorbike, rear | [Link](https://web.inf.ufpr.br/vri/databases/ufpr-alpr/license-agreement/) |
 
 
 

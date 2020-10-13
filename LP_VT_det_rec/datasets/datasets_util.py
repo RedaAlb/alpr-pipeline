@@ -1,9 +1,10 @@
 import cv2
 import os
-import matplotlib.pyplot as plt
 
+from collections import Counter
 
 class DatasetsUtil:
+    """ Provides utility functions to operate on the datasets."""
 
     def __init__(self):
 
@@ -21,6 +22,11 @@ class DatasetsUtil:
                            "plate": "LP_chars",
                            "position_plate": "LP_bb"}
 
+        # This is the dataset index of all the datasets that are split into fixed train, val, and test sets, such as ufpr_alpr.
+        self.split_datasets_i = [4]
+
+
+    # TODO: Possible rename to get_all_samples, and all references to "labels".
     def get_all_labels(self, dataset_i=0, print_log=False, subset=""):
         """ Excract the needed labels from the annotation (anno) files.
         
@@ -196,3 +202,98 @@ class DatasetsUtil:
                     img_index += 1
                 
         cv2.destroyAllWindows()
+
+
+    def get_all_subset_labels(self, dataset_i):
+        """ Returns all labels of the dataset regardless if it is split into fixed train, val, test sets or not.
+        
+        If the dataset is split, all subsets will be combined as one dataset.
+
+        Parameters:
+        dataset_i: Dataset index.
+
+        Returns:
+        list: All sample annotations/labels for the dataset.
+        """
+
+        if dataset_i not in self.split_datasets_i:  # If dataset is not split into train, val, test sets.
+            dataset_labels = self.get_all_labels(dataset_i)
+        else:
+            dataset_labels_train = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="training")
+            dataset_labels_val = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="validation")
+            dataset_labels_test = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="testing")
+            dataset_labels = dataset_labels_train + dataset_labels_val + dataset_labels_test
+
+        return dataset_labels
+
+
+    def get_num_samples(self, dataset_i):
+        """ Returns the number of samples for the dataset.
+        
+        Parameters:
+        dataset_i: Dataset index.
+
+        Returns:
+        int: Number of samples in the dataset.
+        """
+
+        dataset_labels = self.get_all_subset_labels(dataset_i)
+        return len(dataset_labels)
+
+    def get_avg_num_veh(self, dataset_i):
+        """ Returns the average # of vehicles in a sample.
+        
+        Parameters:
+        dataset_i: Dataset index.
+
+        Returns:
+        float: Average # of vehicles in a sample.
+        """
+
+        dataset_labels = self.get_all_subset_labels(dataset_i)
+
+        total_num_veh = 0
+        for sample in dataset_labels:
+
+            try:
+                total_num_veh += sample["num_vehicles"][0]
+            except KeyError: # When num of vehicles was not specified in the annotations, which means num vehicles=1.
+                total_num_veh += 1
+
+        avg_num_veh = total_num_veh / len(dataset_labels)
+
+        return avg_num_veh
+
+    
+    def get_char_count(self, dataset_i):
+        """ Returns the number of occurances each character appears in the LP across all dataset samples.
+
+        Parameters:
+        dataset_i: Dataset index.
+
+        Returns:
+        Counter: Each key is a character with the value being the number of occurances.
+        """
+
+        dataset_labels = self.get_all_subset_labels(dataset_i)
+
+        # A string that holds all LPs of all vehicles in the dataset, which is then used to get number of occurances for each character.
+        licence_plate_chars = ""
+
+        for sample in dataset_labels:
+            try:
+                num_veh = sample["num_vehicles"][0]
+            except KeyError: # When num of vehicles was not specified in the annotations, which means num vehicles=1.
+                num_veh = 1
+            
+            for i in range(num_veh):
+                licence_plate_chars += str(sample["LP_chars"][i])
+
+        
+        return Counter(licence_plate_chars)
+
+
+
+
+
+
