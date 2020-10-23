@@ -1,1 +1,0 @@
-Install [Darknet](https://github.com/AlexeyAB/darknet) in this directory.

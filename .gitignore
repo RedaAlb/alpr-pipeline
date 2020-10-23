@@ -1,9 +1,10 @@
 .vscode
 __pycache__
 .ipynb_checkpoints
-yolov3.weights
 yolov4.weights
 yolov4-tiny.weights
+yolov4-tiny-relu.weights
+yolov3.weights
 yolov3_model.h5
 LP_VT_det_rec/yolov3/yolov3_ml_space/weights
 vcpkg
@@ -18,4 +19,10 @@ LP_VT_det_rec/datasets/caltech_cars/
 LP_VT_det_rec/datasets/english_lp/
 LP_VT_det_rec/datasets/open_alpr_eu/
 LP_VT_det_rec/datasets/ufpr_alpr/
+LP_VT_det_rec/datasets/indian/
 LP_VT_det_rec/datasets/rename_files.py
+LP_VT_det_rec/darknet/*
+LP_VT_det_rec/yolov4/test/logs
+LP_VT_det_rec/yolov4/test/saved_weights
+LP_VT_det_rec/datasets/vehicles_cropped
+!LP_VT_det_rec/darknet/README.md
