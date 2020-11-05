@@ -78,6 +78,7 @@ then set the same 9 `anchors` in each of 3 `[yolo]`-layers in your cfg-file. But
 	- `darknet.exe detector map data/obj.data cfg/yolov4-tiny-obj.cfg backup/0/yolov4-tiny-obj_2000.weights -thresh 0.75 -iou_thresh 0.5`
 		- This will use the set whatever val set is in the `obj.data` file.
 		- `-thresh` for the confidence threshold.
+- WebCam: `darknet.exe detector demo cfg/coco.data cfg/yolov4.cfg yolov4.weights -c 0`
 
 
 ## How to improve detection

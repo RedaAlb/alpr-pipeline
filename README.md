@@ -1,6 +1,10 @@
 # IntelligentTransportationInfrastructure_ITI
 
+Please note, this repo is still in early stages and will be finalised when concrete outcomes are achieved.
+
 ## Project outline.
+
+This is a project that I am undertaking as a research associate at the University of Westminster.
 
 This project involves two main components:
 
@@ -21,4 +25,3 @@ Please refer to the `\LP_VT_det_rec` directory.
 ## 2. For TRT
 
 To be added.
-
