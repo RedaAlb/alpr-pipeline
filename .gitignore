@@ -26,3 +26,7 @@ LP_VT_det_rec/yolov4/test/logs
 LP_VT_det_rec/yolov4/test/saved_weights
 LP_VT_det_rec/datasets/vehicles_cropped
 !LP_VT_det_rec/darknet/README.md
+LP_VT_det_rec/datasets/labelImg
+LP_VT_det_rec/datasets/OpenLabeling
+LP_VT_det_rec/datasets/lps_cropped
+LP_VT_det_rec/datasets/lps_cropped_neg
