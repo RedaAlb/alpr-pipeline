@@ -25,3 +25,14 @@ To-do regarding the datasets:
 
 Waiting for additional dataset:
 - SSIG-SegPlate, the request document requires signature from the head of department, I have contacted Phil(HoD) regarding this.
+
+
+
+
+## To label a dataset (specifically for vehicle and LP detection and recognition):
+
+- Use this [repo](https://github.com/RedaAlb/labelImg).
+- Two videos were made demonstrating how the labelling is done:
+    - [Part 1 video](https://youtu.be/5tF9a6q4pDQ)
+    - [Part 2 video](https://youtu.be/YAxl1udnBqI)
+    - There are two parts since the maximum upload video duration is 15 minutes.
