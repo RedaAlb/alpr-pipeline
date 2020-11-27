@@ -4,6 +4,18 @@ This readme contains notes about using the Darknet framework and some general no
 
 Install [Darknet](https://github.com/AlexeyAB/darknet) in this directory by following the instructions in the repo.
 
+For training a custom model, follow the instructions starting from [Setup for training](#Setup-for-training) For running the full ALPR pipeline:
+
+1. After installing Darknet, copy the following files to your build folder (`build/darknet/x64/`):
+	- `alpr_pipeline.py`, implements the full ALPR pipeline, first detects the vehicles in the frame, crops the vehicles, then for each vehicle patch, then LP is detected, each LP patch is cropped and then the LP characters are detected and assembled to form the full LP text.
+	- `detector.py`, used to create YOLO detectors to be easily used.
+	- `evaluator.py`, used to evaluate each stage of the ALPR pipeline, vehicle detection, LP detection, LP recognition.
+
+
+2. Open `alpr_pipeline.py`, change the variables/configurations on the top.
+3. Run `alpr_pipeline.py`.
+
+
 
 ## Setup for training
 
@@ -78,7 +90,7 @@ then set the same 9 `anchors` in each of 3 `[yolo]`-layers in your cfg-file. But
 	- `darknet.exe detector map data/obj.data cfg/yolov4-tiny-obj.cfg backup/0/yolov4-tiny-obj_2000.weights -thresh 0.75 -iou_thresh 0.5`
 		- This will use the set whatever val set is in the `obj.data` file.
 		- `-thresh` for the confidence threshold.
-- WebCam: `darknet.exe detector demo cfg/coco.data cfg/yolov4.cfg yolov4.weights -c 0`
+- WebCam: `darknet.exe detector demo data/coco.data cfg/yolov4.cfg yolov4.weights -c 0`
 
 
 ## How to improve detection

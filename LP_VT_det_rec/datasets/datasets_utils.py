@@ -2,13 +2,22 @@ import cv2
 import os
 import glob
 import random
-from cv2 import data
+import json
+import time
 import matplotlib.pyplot as plt
+
+from pycocotools.coco import COCO
+import requests
 
 from collections import Counter
 
+
+# To-do:
+    # Add and make documentation consistent.
+
 class DatasetsUtils:
-    """ Provides utility functions to operate on the datasets."""
+    """ Provides utility functions to operate on the datasets.
+    """
 
     def __init__(self):
 
@@ -35,13 +44,14 @@ class DatasetsUtils:
 
 
     # TODO: Possible rename to get_all_samples, and all references to "labels".
-    def get_all_labels(self, dataset_i=0, print_log=False, subset="", prefix=""):
+    def get_all_labels(self, dataset_i=0, print_log=False, subset="", prefix="", return_dict=False):
         """ Excract the needed labels from the annotation (anno) files.
         
         Parameters:
         dataset_i: The dataset index to get the labels to. Chosen from the class datasets variable.
         print_log: Whether to print the structure of the lines and values (default False).
         subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
+        return_dict: Whether to return a dict where the key is the img file name, and value is sample data.
         
         Returns:
         list: All the labels for all the samples in the dataset, where each element is a dict for each sample, with key names
@@ -56,6 +66,8 @@ class DatasetsUtils:
         img_file_names = os.listdir(path_to_imgs)
         
         all_labels = []  # Will hold all labels for all the samples in the dataset, where each element is a dict.
+
+        if return_dict: all_labels = {}
         
         for i, anno_file in enumerate(anno_file_names):
             try: 
@@ -105,8 +117,13 @@ class DatasetsUtils:
             
             labels["LP_chars_bb"] = LP_chars_pos
             labels["img_file_name"] = img_file_names[i]
-            
-            all_labels.append(labels)
+
+            if not return_dict:
+                all_labels.append(labels)
+            else:
+                if img_file_names[i] in all_labels:
+                    print("Sample overidden...")
+                all_labels[img_file_names[i]] = labels
         
         return all_labels
 
@@ -211,7 +228,7 @@ class DatasetsUtils:
         cv2.destroyAllWindows()
 
 
-    def get_all_subset_labels(self, dataset_i):
+    def get_all_subset_labels(self, dataset_i, return_dict=False):
         """ Returns all labels of the dataset regardless if it is split into fixed train, val, test sets or not.
         
         If the dataset is split, all subsets will be combined as one dataset.
@@ -224,15 +241,36 @@ class DatasetsUtils:
         """
 
         if dataset_i not in self.split_datasets_i:  # If dataset is not split into train, val, test sets.
-            dataset_labels = self.get_all_labels(dataset_i)
+            dataset_labels = self.get_all_labels(dataset_i, return_dict=return_dict)
         else:
-            dataset_labels_train = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="training")
-            dataset_labels_val = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="validation")
-            dataset_labels_test = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="testing")
-            dataset_labels = dataset_labels_train + dataset_labels_val + dataset_labels_test
+            dataset_labels_train = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="training", return_dict=return_dict)
+            dataset_labels_val = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="validation", return_dict=return_dict)
+            dataset_labels_test = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="testing", return_dict=return_dict)
+
+            if type(dataset_labels_train) is not dict:
+                dataset_labels = dataset_labels_train + dataset_labels_val + dataset_labels_test
+            else:
+                dataset_labels = dataset_labels_train
+                dataset_labels.update(dataset_labels_val)
+                dataset_labels.update(dataset_labels_test)
 
         return dataset_labels
 
+
+    def save_all_annos_as_dict(self):
+
+        all_annos = {}
+
+        for i, dataset in enumerate(self.datasets):
+            annotations = self.get_all_subset_labels(i, return_dict=True)
+            all_annos[dataset] = annotations
+
+        file_name = "all_annos.json"
+
+        with open(file_name, 'w') as file:
+            json.dump(all_annos, file)
+
+        print(f"All annotations saved in {file_name}.")
 
     def get_num_samples(self, dataset_i):
         """ Returns the number of samples for the dataset.
@@ -627,24 +665,27 @@ class DatasetsUtils:
 
         return file_names
     
-    def gen_dataset_split_files(self, dataset_i, imgs_root, imgs_prefix, save_dir, train=70, val=20, seed=2):
+    def gen_dataset_split_files(self, dataset_i, imgs_root, imgs_prefix, train=70, val=20, seed=2):
         """ Generates train.txt, val.txt, test.txt for the given dataset, and saves them in save_dir, to be used with YOLOv4.
 
         Parameters:
-        dataset_i: Dataset index.
+        dataset_i: Dataset index, or for COCO dataset, it will be the name.
         imgs_root: The root directory for all the images for all datasets, not only for the given dataset.
         imgs_prefix: Prefix for each image file name, (the relative path to the split .txt files from wherever they will be used from).
-        save_dir: The directory where the annotation files are saved.
         train: Training set percentage (default 70).
         val: Validation set percentage (default 20).
         seed: The seed used to shuffle the samples before the split is happened (default 2).
 
         """
 
-        dataset_name = self.datasets[dataset_i]
-        dataset_path = f"{imgs_root}/{dataset_name}"
-        img_file_names = os.listdir(f"{dataset_path}")
-        # print(img_file_names)
+        if type(dataset_i) != str:  # For the ALPR datasets.
+            dataset_name = self.datasets[dataset_i]
+            dataset_path = f"{imgs_root}/{dataset_name}"
+            img_file_names = os.listdir(f"{dataset_path}")
+        else:  # For coco downloaded dataset.
+            dataset_name = dataset_i
+            dataset_path = f"{imgs_root}/{dataset_name}"
+            img_file_names = os.listdir(f"{dataset_path}")
 
         # For when the dataset is split into fixed train, val, and test sets, in that case, img_file_names will return
         # ["training", "validation", "testing"].
@@ -664,7 +705,7 @@ class DatasetsUtils:
                 elif set_name == "validation": subset_acro = "val"
                 else: subset_acro = "test"
 
-                set_file = f"{save_dir}/{subset_acro}_{dataset_name}.txt"
+                set_file = f"{imgs_root}/{subset_acro}_{dataset_name}.txt"
                 set_file_paths += set_file + "\n"
                 with open(set_file, "w") as file: file.write(set_imgs_file)
 
@@ -697,9 +738,9 @@ class DatasetsUtils:
         for test_img in test_imgs: test_anno_file += f"{imgs_prefix}/{dataset_name}/{test_img}\n"
 
 
-        train_set_path = f"{save_dir}/train_{dataset_name}.txt"
-        val_set_path = f"{save_dir}/val_{dataset_name}.txt"
-        test_set_path = f"{save_dir}/test_{dataset_name}.txt"
+        train_set_path = f"{imgs_root}/train_{dataset_name}.txt"
+        val_set_path = f"{imgs_root}/val_{dataset_name}.txt"
+        test_set_path = f"{imgs_root}/test_{dataset_name}.txt"
         
         with open(train_set_path, "w") as file: file.write(train_anno_file)
         with open(val_set_path, "w") as file: file.write(val_anno_file)
@@ -925,4 +966,210 @@ class DatasetsUtils:
                 file.write(anno_str)
             
             return anno_file_path
+
+
+    def generate_v_det_data(self, dataset_i, save_dir_path, subset="", prefix="", darknet=True):
+        """ Creates vehicle BBs detection annotation files (.txt).
+
+        Parameters:
+        dataset_i: Dataset index.
+        save_dir_path: The root folder where the vehicle images is to be saved in.
+        subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
+        prefix: Prefix for images directory (default "").
+        darknet: Whether to generate the annotations for the darknet YOLOv4 framework, if False, then for TF framework (default True).
+
+        Returns:
+        str: Annotation file path.
+        """
+
+
+        if subset == "":
+            dataset_imgs_dir = self.datasets[dataset_i]
+        else:  # For when a dataset has a fixed train, val, and test sets.
+            dataset_imgs_dir = f"{self.datasets[dataset_i]}/{subset}"
+
+        dataset_save_dir_path = f"{save_dir_path}/{dataset_imgs_dir}"
+        # print(dataset_save_dir_path)
+
+        if not os.path.exists(dataset_save_dir_path):
+            os.makedirs(dataset_save_dir_path)
+
+        dataset_labels = self.get_all_labels(dataset_i, subset=subset, prefix=prefix)
+
+        if dataset_labels is None:  # For when a dataset has fixed train, val, and test sets.
+            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="training", prefix=prefix, darknet=darknet)
+            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="validation", prefix=prefix, darknet=darknet)
+            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="testing", prefix=prefix, darknet=darknet)
+            return
+
+        anno_str = ""  # Will hold final annotation file content(string).
+        
+        for sample in dataset_labels:
+
+            try: num_vehicles = sample["num_vehicles"][0]
+            except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
+
+            img_filename = sample["img_file_name"]
+            img_filepath = f"{prefix}{dataset_imgs_dir}/{img_filename}"
+            
+            img = cv2.imread(img_filepath)
+            sub_img_filepath = f"{dataset_save_dir_path}/{img_filename}"
+            cv2.imwrite(sub_img_filepath, img)
+            # plt.imshow(img)
+            # plt.show()
+
+            sample_anno_file = ""  # Anno file content for a sample.
+
+            for i in range(num_vehicles):
+                v_bb = sample["v_bb"][i]
+                v_x, v_y = v_bb[0], v_bb[1]
+                v_w, v_h = v_bb[2], v_bb[3]
+                v_type = sample["v_type"][i]
+
+                img_h = img.shape[0]
+                img_w = img.shape[1]
+
+                v_centre_x = v_x + (v_w / 2)
+                v_centre_y = v_y + (v_h / 2)
+                rel_v_centre_x = v_centre_x / img_w
+                rel_v_centre_y = v_centre_y / img_h
+                rel_v_w = v_w / img_w
+                rel_v_h = v_h / img_h
+
+                if v_type == "car": v_class_id = 0
+                elif v_type == "motorcycle": v_class_id = 1
+                else:
+                    print("Unkown class")
+                    return
+
+                if darknet:
+                    anno_line = f"{v_class_id} {rel_v_centre_x} {rel_v_centre_y} {rel_v_w} {rel_v_h}\n"
+                    sample_anno_file += anno_line
+                    
+                else:
+                    anno_line = f"{sub_img_filepath} {v_class_id},{rel_v_centre_x},{rel_v_centre_y},{rel_v_w},{rel_v_h}\n"
+                    anno_str += anno_line
+            
+            if darknet:
+                split_img_filename = img_filename.split(".")
+                anno_file_name = f"{split_img_filename[0]}.txt"
+                with open(f"{dataset_save_dir_path}/{anno_file_name}", "w") as file:
+                    file.write(sample_anno_file)
+
+        # For the TensorFlow YOLOv4 framework.
+        if not darknet:
+            # Saving the annotations to file.
+            anno_file_path = f"{dataset_save_dir_path}/{self.datasets[dataset_i]}_yolo_anno.txt"
+            with open(anno_file_path, "w") as file:
+                file.write(anno_str)
+            
+            return anno_file_path
+    
+    def download_coco(self, anno_file, class_names, dir_name, num_samples=5):
+        """ Downloads given COCO class names samples and creates YOLO compatible annotation files.
+        """
+
+        try: coco = COCO(anno_file)
+        except:
+            print(f"Failed to load the coco annotation file \"{anno_file}\"")
+            return
+        cats = coco.loadCats(coco.getCatIds())
+        nms = [cat['name'] for cat in cats]
+        print('COCO categories: \n{}\n'.format(' '.join(nms)))
+
+        save_dir = f"coco/{dir_name}"
+        try: os.makedirs(save_dir)
+        except FileExistsError: pass
+
+        class_ids = []
+        images = []
+
+        for class_name in class_names:
+            print("Class:", class_name)
+            catIds = coco.getCatIds(catNms=[class_name])[0]
+            class_ids.append(catIds)
+            print("Class ID:", catIds)
+
+            imgIds = coco.getImgIds(catIds=catIds)
+            print("Number of imgs:", len(imgIds))
+
+            images += coco.loadImgs(imgIds)
+            print("Example img:", images[-1], "\n")
+
+        print("Class IDs", class_ids)
+        total_imgs = len(images)
+        print("Total imgs:", total_imgs, "(including duplicates)")
+
+        imgs_done = os.listdir(save_dir)  # To prevent downloading twice next time this is ran.
+        img_num = 0
+        print_num = 100  # How many images to download to print an update.
+        start_time = time.time()
+        catIds = coco.getCatIds(catNms=class_names)
+
+        for im in images:
+            file_name = im['file_name']
+
+            # To prevent "downloading" the same image twice.
+            if file_name in imgs_done: continue
+
+            try:
+                img_data = requests.get(im['coco_url']).content
+            except:
+                print("Request broke, run again. All currently downloaded images will be skipped.")
+                break
+
+            with open(save_dir + '/' + im['file_name'], 'wb') as handler:
+                handler.write(img_data)
+
+            img_num += 1
+
+            if img_num % print_num == 0:
+                print(f"{img_num} images downloaded after {round((time.time() - start_time) / 60, 2)} minutes")
+
+
+            dw = 1. / im['width']
+            dh = 1. / im['height']
+            
+            annIds = coco.getAnnIds(imgIds=im['id'], catIds=catIds, iscrowd=None)
+            anns = coco.loadAnns(annIds)
+                
+            filename = im['file_name'].replace(".jpg", ".txt")
+
+            with open(f"{save_dir}/" + filename, "a") as myfile:
+                for i in range(len(anns)):
+                    class_id = anns[i]["category_id"]
+                    xmin = anns[i]["bbox"][0]
+                    ymin = anns[i]["bbox"][1]
+                    xmax = anns[i]["bbox"][2] + anns[i]["bbox"][0]
+                    ymax = anns[i]["bbox"][3] + anns[i]["bbox"][1]
+                    
+                    x = (xmin + xmax)/2
+                    y = (ymin + ymax)/2
+                    
+                    w = xmax - xmin
+                    h = ymax - ymin
+                    
+                    x = x * dw
+                    w = w * dw
+                    y = y * dh
+                    h = h * dh
+
+                    class_label = class_ids.index(class_id)
+
+                    # mystring = str(f"{class_label} " + str(truncate(x, 7)) + " " + str(truncate(y, 7)) + " " + str(truncate(w, 7)) + " " + str(truncate(h, 7)))
+                    mystring = f"{class_label} {x} {y} {w} {h}\n"
+                    myfile.write(mystring)
+
+
+            myfile.close()
+
+            imgs_done += file_name
+
+            if img_num == num_samples:
+                print(f"Finished downloading {num_samples} images in", save_dir)
+                break
+
+        print("Finished downloading all images and creating annotation files for", class_names, "classes in\n", save_dir)
+
+
 
