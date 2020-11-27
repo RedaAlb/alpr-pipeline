@@ -11,7 +11,6 @@ vcpkg
 checkpoints
 variables
 saved_model.pb
-# LP_VT_det_rec/yolov4/test/dataset/val2017
 LP_VT_det_rec/yolov4/test/dataset/val2017/*
 LP_VT_det_rec/datasets/annotations/
 LP_VT_det_rec/datasets/aolp/
@@ -21,12 +20,15 @@ LP_VT_det_rec/datasets/open_alpr_eu/
 LP_VT_det_rec/datasets/ufpr_alpr/
 LP_VT_det_rec/datasets/indian/
 LP_VT_det_rec/datasets/rename_files.py
-LP_VT_det_rec/darknet/*
+LP_VT_det_rec/darknet/darknet/*
+!LP_VT_det_rec/darknet/README.md
 LP_VT_det_rec/yolov4/test/logs
 LP_VT_det_rec/yolov4/test/saved_weights
 LP_VT_det_rec/datasets/vehicles_cropped
-!LP_VT_det_rec/darknet/README.md
 LP_VT_det_rec/datasets/labelImg
 LP_VT_det_rec/datasets/OpenLabeling
 LP_VT_det_rec/datasets/lps_cropped
 LP_VT_det_rec/datasets/lps_cropped_neg
+LP_VT_det_rec/datasets/vehicle_det
+LP_VT_det_rec/datasets/coco
+LP_VT_det_rec/datasets/all_annos.json
