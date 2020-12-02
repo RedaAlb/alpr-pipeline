@@ -26,6 +26,40 @@ This provides a summary and key metrics of the main the experiments performed fo
 - To minimise/avoid bias of the random division of the different sets, each experiment is ran for 5 times using a different random seed, and an average of all the metrics for all 5 runs is taken.
 
 
+
+## Full ALPR pipeline evaluation
+
+- These experiment refer to the results of all the stages of the pipeline using the best detectors obtained so far from all individual experiments.
+
+### `ALPR_#0`
+
+LP detection used: `Det_#0`
+LP recognition used: `Rec_#1`
+
+#### Results
+
+| Dataset      | Stage  | TP   | FN | Total | Recall |
+|--------------|--------|------|----|-------|--------|
+| Caltech cars | V Det  | 14   | 0  | 14    | 100    |
+|              | LP Det | 13   | 1  | 14    | 92.86  |
+|              | LP Rec | 13   | 1  | 14    | 92.86  |
+| English LP   | V Det  | 52   | 0  | 52    | 100    |
+|              | LP Det | 50   | 2  | 52    | 96.15  |
+|              | LP Rec | 49   | 3  | 52    | 94.23  |
+| AOLP         | V Det  | 218  | 1  | 219   | 99.54  |
+|              | LP Det | 216  | 3  | 219   | 98.63  |
+|              | LP Rec | 210  | 9  | 219   | 95.89  |
+| Open ALPR EU | V Det  | 12   | 0  | 12    | 100    |
+|              | LP Det | 12   | 0  | 12    | 100    |
+|              | LP Rec | 12   | 0  | 12    | 100    |
+| UFPR ALPR    | V Det  | 1800 | 0  | 1800  | 100    |
+|              | LP Det | 1769 | 31 | 1800  | 98.28  |
+|              | LP Rec | 1732 | 68 | 1800  | 96.22  |
+| Average      |        |      |    |       | 95.84  |
+
+
+
+
 ## LP detection experiments
 
 ### `Det_#0 - Baseline/initial experiment/benchmark`
@@ -126,3 +160,76 @@ This provides a summary and key metrics of the main the experiments performed fo
 | class_id = 33, name = X, ap = 99.46%     (TP = 96, FP = 0)          |
 | class_id = 34, name = Y, ap = 100.00%            (TP = 274, FP = 0) |
 | class_id = 35, name = Z, ap = 99.90%     (TP = 261, FP = 0)         |
+
+
+
+### `Rec_#5 - Baseline/initial experiment/benchmark`
+
+- In this experiment, the dataset was doubled by using the negative images of all LP patches.
+- It is observed that the negative image of an LP patch resembles LPs that have a dark background.
+- It showed better results than the previous noted experiment.
+
+#### Experiment files
+
+- Configuration: [5_rec-yolov4-tiny-obj.cfg](LP_rec/5/5_rec-yolov4-tiny-obj.cfg)
+- Data: [4_rec-obj.data](LP_rec/5/4_rec-obj.data)
+- Names: [lp_rec_obj.names](LP_rec/5/lp_rec_obj.names)
+- Final weights chosen: [5_rec-yolov4-tiny-obj_last.weights](https://drive.google.com/file/d/101DRWmA_bJ0lY6COqzj1CRTdw691hu_S/view?usp=sharing)
+
+
+#### Results
+
+| Thresh      | Weights | Set   | mAP(%) | Avg IoU (%) | Precision | Recall | F1   | TP    | FP  | FN   |
+|-------------|---------|-------|--------|-------------|-----------|--------|------|-------|-----|------|
+| (0.75, 0.5) | Best    | Train | 99.96  | 87.16       | 1         | 0.99   | 1    | 24850 | 10  | 143  |
+| (0.75, 0.5) | Best    | Val   | 99.24  | 85.23       | 0.99      | 0.94   | 0.96 | 9223  | 94  | 602  |
+| (0.75, 0.5) | Best    | Test  | 97.04  | 84.35       | 0.99      | 0.9    | 0.95 | 13014 | 95  | 1392 |
+| (0.75, 0.5) | 45000   | Train | 99.96  | 86.03       | 1         | 0.99   | 1    | 24832 | 11  | 161  |
+| (0.75, 0.5) | 45000   | Test  | 97.38  | 84.82       | 0.99      | 0.91   | 0.95 | 13161 | 94  | 1245 |
+| (0.75, 0.5) | Last    | Train | 99.95  | 89.64       | 1         | 1      | 1    | 24953 | 5   | 40   |
+| (0.75, 0.5) | Last    | Test  | 95.73  | 86.55       | 0.99      | 0.92   | 0.95 | 13265 | 114 | 1141 |
+
+- We can see that the best weights for the test set is the `Last` weights.
+
+
+<img src="LP_rec/5/chart_5_rec-yolov4-tiny-obj.png" width="500">
+
+| Results for each class/character                                    |
+|---------------------------------------------------------------------|
+| detections_count = 18008, unique_truth_count = 14406                |
+| class_id = 0, name = 0, ap = 98.33%      (TP = 729, FP = 14)        |
+| class_id = 1, name = 1, ap = 96.96%      (TP = 845, FP = 17)        |
+| class_id = 2, name = 2, ap = 100.00%     (TP = 500, FP = 1)         |
+| class_id = 3, name = 3, ap = 99.52%      (TP = 628, FP = 0)         |
+| class_id = 4, name = 4, ap = 99.93%      (TP = 810, FP = 8)         |
+| class_id = 5, name = 5, ap = 99.99%      (TP = 759, FP = 4)         |
+| class_id = 6, name = 6, ap = 99.94%      (TP = 916, FP = 2)         |
+| class_id = 7, name = 7, ap = 97.64%      (TP = 654, FP = 0)         |
+| class_id = 8, name = 8, ap = 98.74%      (TP = 1026, FP = 14)       |
+| class_id = 9, name = 9, ap = 99.79%      (TP = 1084, FP = 6)        |
+| class_id = 10, name = A, ap = 99.89%     (TP = 1496, FP = 0)        |
+| class_id = 11, name = B, ap = 98.50%     (TP = 371, FP = 0)         |
+| class_id = 12, name = C, ap = 96.42%     (TP = 136, FP = 5)         |
+| class_id = 13, name = D, ap = 98.69%     (TP = 94, FP = 5)          |
+| class_id = 14, name = E, ap = 98.42%     (TP = 137, FP = 4)         |
+| class_id = 15, name = F, ap = 99.07%     (TP = 43, FP = 0)          |
+| class_id = 16, name = G, ap = 92.37%     (TP = 130, FP = 0)         |
+| class_id = 17, name = H, ap = 100.00%            (TP = 112, FP = 0) |
+| class_id = 18, name = I, ap = 90.25%     (TP = 80, FP = 3)          |
+| class_id = 19, name = J, ap = 100.00%            (TP = 145, FP = 0) |
+| class_id = 20, name = K, ap = 80.45%     (TP = 114, FP = 1)         |
+| class_id = 21, name = L, ap = 100.00%            (TP = 145, FP = 0) |
+| class_id = 22, name = M, ap = 85.01%     (TP = 176, FP = 13)        |
+| class_id = 23, name = N, ap = 100.00%            (TP = 48, FP = 0)  |
+| class_id = 24, name = O, ap = 42.61%     (TP = 35, FP = 4)          |
+| class_id = 25, name = P, ap = 99.99%     (TP = 286, FP = 0)         |
+| class_id = 26, name = Q, ap = 86.03%     (TP = 70, FP = 1)          |
+| class_id = 27, name = R, ap = 100.00%            (TP = 140, FP = 0) |
+| class_id = 28, name = S, ap = 93.82%     (TP = 226, FP = 0)         |
+| class_id = 29, name = T, ap = 100.00%            (TP = 112, FP = 0) |
+| class_id = 30, name = U, ap = 99.87%     (TP = 129, FP = 5)         |
+| class_id = 31, name = V, ap = 99.98%     (TP = 171, FP = 6)         |
+| class_id = 32, name = W, ap = 96.28%     (TP = 243, FP = 0)         |
+| class_id = 33, name = X, ap = 97.78%     (TP = 109, FP = 0)         |
+| class_id = 34, name = Y, ap = 99.89%     (TP = 276, FP = 1)         |
+| class_id = 35, name = Z, ap = 99.99%     (TP = 290, FP = 0)         |
