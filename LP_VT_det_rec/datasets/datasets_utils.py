@@ -116,7 +116,10 @@ class DatasetsUtils:
                     
             
             labels["LP_chars_bb"] = LP_chars_pos
-            labels["img_file_name"] = img_file_names[i]
+            try:
+                labels["img_file_name"] = img_file_names[i]
+            except IndexError:
+                pass
 
             if not return_dict:
                 all_labels.append(labels)
@@ -506,7 +509,11 @@ class DatasetsUtils:
             try: num_vehicles = sample["num_vehicles"][0]
             except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
 
-            img_filename = sample["img_file_name"]
+            try:
+                img_filename = sample["img_file_name"]
+            except:
+                continue
+
             img_filepath = f"{prefix}{dataset_imgs_dir}/{img_filename}"
             
             img = cv2.imread(img_filepath)
@@ -814,19 +821,8 @@ class DatasetsUtils:
         
         print(f"All subsets combined successfully, files_saved:\n{all_train_path}\n{all_val_path}\n{all_test_path}")
 
-    def lp_patch_preprocessing(self, lp_patch):
-        """ Used to apply preprocessing to LP patches to double the dataset for LP recognition.
-
-        Parameters:
-        lp_patch: The image of the LP patch.
-        """
-
-        # To be experimented with.
-
-        return lp_patch
-
     
-    def generate_lp_rec_data(self, dataset_i, save_dir_path, subset="", prefix="", negative_imgs=False, darknet=True):
+    def generate_lp_rec_data(self, dataset_i, save_dir_path, subset="", prefix="", negative_imgs=False, same_ratio=False, darknet=True, process=False):
         """ Crops the LPs from the vehicle cropped images, saves them in save_dir_path, and creates LP chars BBs detection annotation file(s) (.txt).
 
         Parameters:
@@ -835,7 +831,10 @@ class DatasetsUtils:
         subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
         prefix: Prefix for images directory (default "").
         negative_imgs: Whether to create negative images of each LP patch and save it as an additional sample. This will double the # of samples.
+        same_ratio: Whether to make all LP patches have the same aspect ratio (w/h) of 2.859, which is the average across all datasets.
         darknet: Whether to generate the annotations for the darknet YOLOv4 framework, if False, then for TF framework (default True).
+        process: Whether to apply preprocessing to the LP patch.
+
 
         Returns:
         str: Annotation file path.
@@ -856,10 +855,14 @@ class DatasetsUtils:
         dataset_labels = self.get_all_labels(dataset_i, subset=subset, prefix=prefix)
 
         if dataset_labels is None:  # For when a dataset has fixed train, val, and test sets.
-            dataset_labels = self.generate_lp_rec_data(dataset_i, save_dir_path, subset="training", prefix=prefix, negative_imgs=negative_imgs, darknet=darknet)
-            dataset_labels = self.generate_lp_rec_data(dataset_i, save_dir_path, subset="validation", prefix=prefix, negative_imgs=negative_imgs, darknet=darknet)
-            dataset_labels = self.generate_lp_rec_data(dataset_i, save_dir_path, subset="testing", prefix=prefix, negative_imgs=negative_imgs, darknet=darknet)
+            sets = ["training", "validation", "testing"]
+            for subset in sets:
+                _ = self.generate_lp_rec_data(dataset_i, save_dir_path, subset=subset, prefix=prefix, negative_imgs=negative_imgs, same_ratio=same_ratio, darknet=darknet, process=process)
+
             return
+
+        
+        if same_ratio: AVG_RATIO = 2.859  # Average (w/h) ratio across all datasets.
 
         anno_str = ""  # Will hold final annotation file content(string).
         
@@ -870,7 +873,11 @@ class DatasetsUtils:
             try: num_vehicles = sample["num_vehicles"][0]
             except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
 
-            img_filename = sample["img_file_name"]
+            try:
+                img_filename = sample["img_file_name"]
+            except:
+                continue
+
             img_filepath = f"{prefix}{dataset_imgs_dir}/{img_filename}"
             
             img = cv2.imread(img_filepath)
@@ -886,24 +893,40 @@ class DatasetsUtils:
                 v_w, v_h = v_bb[2], v_bb[3]
 
                 # Cropped vehicle
-                cropped_vehicle = img[v_y:v_y+v_h, v_x:v_x+v_w]
- 
+                cropped_vehicle = img[v_y:v_y+v_h, v_x:v_x+v_w] 
 
                 lp_bb = sample["LP_bb"][i]
                 lp_x, lp_y = lp_bb[0], lp_bb[1]
                 lp_w, lp_h = lp_bb[2], lp_bb[3]
 
+                if same_ratio:
+                    ratio = lp_w / lp_h
+                    extra_ratio = ratio / AVG_RATIO
 
-                # Getting the LP coordinates/size relative to the cropped vehicle patch and saving it.
-                # rel_lp_x = lp_x-v_x
-                # rel_lp_y = lp_y-v_y
+                    if ratio >= AVG_RATIO:
+                        new_height = lp_h * extra_ratio
+                        lp_y -= round(new_height / 4)
+                        if lp_y < 0: lp_y = 0  # If out of bound.
 
-                # lp_patch = cropped_vehicle[rel_lp_y:rel_lp_y + lp_h, rel_lp_x:rel_lp_x + lp_w]
+                        lp_h += round(new_height / 2)
+                    else:
+                        new_width = lp_w * extra_ratio
+                        lp_x -= round(new_width / 4)
+                        if lp_x < 0: lp_x = 0
+
+                        lp_w += round(new_width / 2)
+
                 lp_patch = img[lp_y:lp_y+lp_h, lp_x:lp_x+lp_w]
-                lp_patch = self.lp_patch_preprocessing(lp_patch)
+
+                if process:
+                    lp_patch = self.lp_patch_preprocessing(lp_patch)
 
                 sub_img_filepath = f"{dataset_save_dir_path}/{i}_{img_filename}"
-                cv2.imwrite(sub_img_filepath, lp_patch)
+                
+                try:
+                    cv2.imwrite(sub_img_filepath, lp_patch)
+                except:
+                    continue
 
                 if negative_imgs:
                     neg_lp_patch = ~lp_patch
@@ -968,7 +991,19 @@ class DatasetsUtils:
             return anno_file_path
 
 
-    def generate_v_det_data(self, dataset_i, save_dir_path, subset="", prefix="", darknet=True):
+    def lp_patch_preprocessing(self, lp_patch):
+        """ Used to apply preprocessing to LP patches to double the dataset for LP recognition.
+
+        Parameters:
+        lp_patch: The image of the LP patch.
+        """
+
+        lp_patch = cv2.cvtColor(lp_patch, cv2.COLOR_BGR2GRAY)
+
+        return lp_patch
+
+
+    def generate_v_det_data(self, dataset_i, save_dir_path, subset="", prefix="", darknet=True, blur_bg=False):
         """ Creates vehicle BBs detection annotation files (.txt).
 
         Parameters:
@@ -977,6 +1012,7 @@ class DatasetsUtils:
         subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
         prefix: Prefix for images directory (default "").
         darknet: Whether to generate the annotations for the darknet YOLOv4 framework, if False, then for TF framework (default True).
+        blur_bg: Blur the BG and keep the vehicle patches as they are.
 
         Returns:
         str: Annotation file path.
@@ -997,9 +1033,9 @@ class DatasetsUtils:
         dataset_labels = self.get_all_labels(dataset_i, subset=subset, prefix=prefix)
 
         if dataset_labels is None:  # For when a dataset has fixed train, val, and test sets.
-            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="training", prefix=prefix, darknet=darknet)
-            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="validation", prefix=prefix, darknet=darknet)
-            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="testing", prefix=prefix, darknet=darknet)
+            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="training", prefix=prefix, darknet=darknet, blur_bg=blur_bg)
+            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="validation", prefix=prefix, darknet=darknet, blur_bg=blur_bg)
+            dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="testing", prefix=prefix, darknet=darknet, blur_bg=blur_bg)
             return
 
         anno_str = ""  # Will hold final annotation file content(string).
@@ -1009,14 +1045,17 @@ class DatasetsUtils:
             try: num_vehicles = sample["num_vehicles"][0]
             except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
 
-            img_filename = sample["img_file_name"]
+            try:
+                img_filename = sample["img_file_name"]
+            except:
+                continue
             img_filepath = f"{prefix}{dataset_imgs_dir}/{img_filename}"
             
             img = cv2.imread(img_filepath)
             sub_img_filepath = f"{dataset_save_dir_path}/{img_filename}"
-            cv2.imwrite(sub_img_filepath, img)
-            # plt.imshow(img)
-            # plt.show()
+
+            if not blur_bg: cv2.imwrite(sub_img_filepath, img)
+            else: self.save_blurred_sample(sub_img_filepath, img, sample)
 
             sample_anno_file = ""  # Anno file content for a sample.
 
@@ -1064,6 +1103,33 @@ class DatasetsUtils:
                 file.write(anno_str)
             
             return anno_file_path
+    
+    def save_blurred_sample(self, img_save_path, img, sample):
+        """ Save the sample with the BG blurred and only the vehicle patches original.
+
+        Args:
+            img_save_path (str): Saving path for the img.
+            img (numpy.ndarray): The sample image.
+            sample (list): Sample data.
+        """
+
+        try: num_vehicles = sample["num_vehicles"][0]
+        except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
+
+        blurred_img = cv2.GaussianBlur(img, (71, 71), 0)
+
+        for i in range(num_vehicles):
+            v_bb = sample["v_bb"][i]
+            v_x, v_y = v_bb[0], v_bb[1]
+            v_w, v_h = v_bb[2], v_bb[3]
+
+            # Replacing the patch on the blurred image with original image patch to keep the vehicle(s) clear and only the BG blurred.
+            patch = img[v_y:v_y+v_h, v_x:v_x+v_w]
+            blurred_img[v_y:v_y+v_h, v_x:v_x+v_w] = patch
+        
+        cv2.imwrite(img_save_path, blurred_img)
+
+
     
     def download_coco(self, anno_file, class_names, dir_name, num_samples=5):
         """ Downloads given COCO class names samples and creates YOLO compatible annotation files.

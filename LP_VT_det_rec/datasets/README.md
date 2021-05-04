@@ -8,6 +8,11 @@ This directory contains all the datasets used for training, validation, and test
 - `visualise_dataset.ipynb`, used to visualise, extract, and check the datasets and the image annotations/labels.
 - `dataset_analysis.ipynb`, used to analyse the datasets and give an overview of key metrics.
 - `darknet_dataset_preperations.ipynb`, used to make all datasets compatible with the darknet framework to be used for YOLOv4 training.
+- `data_generator.py`, used to generate new samples using various augmentation techniques.
+- `data_generation.ipynb`, applies what `data_generator.py` provides.
+- `Automold.py` and `Helpers.py` are from this [repository](https://github.com/UjjwalSaxena/Automold--Road-Augmentation-Library).
+
+## Main datasets
 
 | Dataset      | # Samples | Resolution | Country   | Notes                | Link                                                                           |
 |--------------|-----------|------------|-----------|----------------------| -------------------------------------------------------------------------------|
@@ -19,17 +24,20 @@ This directory contains all the datasets used for training, validation, and test
 | **Total**    | **7290**  |
 
 
-To-do regarding the datasets:
-- [ ] Add the new Indian dataset to the table (when labelled, in progress).
-    - [ ] Analyse the new Indian dataset.
+### Average (w/h) ratio for LP patches
 
-Waiting for additional dataset:
-- SSIG-SegPlate, the request document requires signature from the head of department, I have contacted Phil(HoD) regarding this.
+| Dataset      | Average ratio (w/h) |
+| ------------ | ------------------- |
+| Caltech Cars | 1.982               |
+| English LP   | 4.031               |
+| OpenALPR EU  | 3.667               |
+| AOLP         | 2.017               |
+| UFPR-ALPR    | 2.597               |
+| **Average**  | **2.859**           |
 
 
 
-
-## To label a dataset (specifically for vehicle and LP detection and recognition):
+## To label a dataset (specifically for vehicle/LP detection and recognition):
 
 - Use this [repo](https://github.com/RedaAlb/labelImg).
 - Two videos were made demonstrating how the labelling is done:
