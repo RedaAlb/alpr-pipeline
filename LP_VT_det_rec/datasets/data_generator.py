@@ -1,18 +1,32 @@
 import os
+import random
+import shutil
+from collections import Counter
+
+import Automold as am
 import cv2
 import matplotlib.pyplot as plt
-from collections import Counter
 
 
 class DataGenerator:
-
+    """ Used to generate new samples using various methods.
+    """
 
     def __init__(self):
         self.lp_chars_labels = ["0","1","2","3","4","5","6","7","8","9", "A","B","C","D","E","F","G","H",
                                 "I","J", "K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
 
-    def get_annotations(self, imgs_dir):
-    
+
+    def get_lp_annotations(self, imgs_dir):
+        """ Get all LP character annotations (img path, char id, x, y, w, h).
+
+        Args:
+            imgs_dir (str): Path to the directory where all the images are located alongside their .txt annotation files.
+
+        Returns:
+            list: All annotations for all LPs in the given image directory.
+        """
+
         annos = []
         
         filenames = os.listdir(imgs_dir)
@@ -58,7 +72,17 @@ class DataGenerator:
 
 
     def get_chars_occ_from_imgs(self, imgs_dir, low_ap_letters):
-        samples_data = self.get_annotations(imgs_dir)
+        """ Get the occurances of all characters from images and their .txt annotation files.
+
+        Args:
+            imgs_dir (str): Path to the directory where all the images are located alongside their .txt annotation files.
+            low_ap_letters (list): The low performing (low average precision) letters.
+
+        Returns:
+            Counter: Number of occurances (occ) for each character, where the key is the character and value is the num of occ.
+        """
+
+        samples_data = self.get_lp_annotations(imgs_dir)
         n_samples = len(samples_data)
         
         digits_count = []
@@ -121,9 +145,22 @@ class DataGenerator:
                          replace_1=True,
                          only_low_ap=False,
                          save_org=True):
+        """ Generate permutations.
 
+        Args:
+            imgs_dir (str): Path to the directory where all the images are located alongside their .txt annotation files.
+            save_dir_name (str): Saving directory for the newly generated data.
+            low_ap_letters (list): The low performing (low average precision) letters.
+            low_ap_dupl (int, optional): How many times a low AP character is allowed to duplicate in the same LP. Defaults to 1.
+            lp_all_letters (bool, optional): Whether to make the whole LP just letters, so replace all digits in the LP. Defaults to False.
+            samples_to_display (int, optional): How many samples to display of the generated data, use -1 for no display. Defaults to -1.
+            exclude_a (bool, optional): Exclude the character "a", since it appears significantly more than other chars. Defaults to False.
+            replace_1 (bool, optional): Whether to replace the digit "1" as it is very narrow and distorts most letters. Defaults to True.
+            only_low_ap (bool, optional): Make the LP only made up of low AP characters. Defaults to False.
+            save_org (bool, optional): Whether to save the original LP patch as a seperate sample. Defaults to True.
+        """
 
-        samples_data = self.get_annotations(imgs_dir)
+        samples_data = self.get_lp_annotations(imgs_dir)
         
         dataset_dir = "/".join(imgs_dir.split("/")[1:])
         full_save_dir = f"{save_dir_name}/{dataset_dir}"
@@ -131,7 +168,8 @@ class DataGenerator:
         except FileExistsError: pass
         
         
-        if samples_to_display != -1: _, ax = plt.subplots(samples_to_display, 2, figsize=(10, 2.5*samples_to_display))
+        if samples_to_display != -1:
+            _, ax = plt.subplots(samples_to_display, 2, figsize=(10, 2.5 * samples_to_display))
         
         for i, sample in enumerate(samples_data):
             img_path = sample[0]
@@ -210,7 +248,19 @@ class DataGenerator:
                 if i+1 == samples_to_display:
                     break
 
+
     def replace_digit(self, img, digit, letter):
+        """ Replace a digit of an LP patch with a letter.
+
+        Args:
+            img (numpy.ndarray): The LP patch, where the digit and character are in.
+            digit (list): The digit patch bounding box info in this format [x, y, w, h], based on the top left corner.
+            letter (list): The letter patch bounding box info in this format [x, y, w, h], based on the top left corner.
+
+        Returns:
+            numpy.ndarray: The same passed in img, but with the digit patch replaced by the letter patch.
+        """
+
         d_x, d_y = digit[1], digit[2]
         d_w, d_h = digit[3], digit[4]
 
@@ -231,9 +281,17 @@ class DataGenerator:
         return img
 
 
-
     def save_sample(self, img, img_path, annos, save_dir, img_prefix=""):
-        
+        """ Save a sample with its annotation file.
+
+        Args:
+            img (numpy.ndarray): The image to be saved.
+            img_path (str): The image path.
+            annos (list): The annotations for the image in this format [class id, x, y, w, h].
+            save_dir (str): Saving directory for the sample.
+            img_prefix (str, optional): A prefix before the saved image filename. Defaults to "".
+        """
+
         img_h, img_w, _ = img.shape
         
         anno_lines = []
@@ -260,3 +318,85 @@ class DataGenerator:
         with open(f"{save_path}.txt", "w") as file:
             file_content = "\n".join(anno_lines)
             file.write(file_content)
+
+
+    def get_low_ap_paths(self, root_dir, path_to_imgs, low_ap_letters):
+        """ Get all the image paths that contain the low average precision (AP) letters.
+
+        Args:
+            root_dir (dir): The root directory of all the datasets.
+            path_to_imgs (list): The path to the images per dataset from the root_dir.
+            low_ap_letters (list): The low performing (low AP) letters.
+
+        Returns:
+            list: All the low AP image paths.
+        """
+
+        low_ap_img_paths = []
+
+        for path in path_to_imgs:
+            annos = self.get_lp_annotations(f"{root_dir}/{path}")
+
+            dataset_paths = []
+
+            for anno in annos:
+                img_path = anno[0]
+                lp_chars = anno[1]
+
+                for lp_char in lp_chars:
+                    char = self.lp_chars_labels[int(lp_char[0])]
+                    if char in low_ap_letters:
+                        dataset_paths.append(img_path)
+                        break
+
+            print(path, "- number of low AP characters:", len(dataset_paths))
+            low_ap_img_paths.append(dataset_paths)
+        
+        return low_ap_img_paths
+
+
+    def gen_rand_aug_imgs(self, root_dir, path_to_imgs, low_ap_letters, output_dir):
+        """ Generate random augmentation images by adding shadow, redish colour, or blur to the images.
+
+        Args:
+            root_dir (dir): The root directory of all the datasets.
+            path_to_imgs (list): The path to the images per dataset from the root_dir.
+            low_ap_letters (list): The low performing (low AP) letters.
+            output_dir (str): The saving directory for the newly generated data.
+        """
+
+        low_ap_img_paths = self.get_low_ap_paths(root_dir, path_to_imgs, low_ap_letters)
+
+        for dataset_paths in low_ap_img_paths:
+            for path in dataset_paths:        
+                img = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
+                
+                rand = random.randint(1, 100)
+                
+                # Each augmentation having 33% chance of being applied.
+                if rand < 33:
+                    proc_img = am.add_shadow(img, no_of_shadows=4, rectangular_roi=(-1,-1,-1,-1), shadow_dimension=4)
+                elif rand >= 33 and rand < 66:
+                    proc_img = am.add_autumn(img)
+                else:
+                    proc_img = am.m_add_blur(img, low_kernel=3, high_kernel=5, w_thresh=150)[0]
+                            
+                
+                dataset_name = path.split("/")[1]
+                new_path = f"{output_dir}/{dataset_name}"
+                
+                try: os.makedirs(new_path)
+                except FileExistsError: pass
+                
+                img_filename = path.split("/")[-1]
+                img_name = img_filename.split(".")[0]
+                img_ext = img_filename.split(".")[-1]
+                
+                new_img_path = f"{output_dir}/{dataset_name}/{img_name}_gen.{img_ext}"
+                plt.imsave(new_img_path, proc_img)
+
+                txt_filepath = "/".join(path.split("/")[:-1]) + "/" + img_name + ".txt"
+                new_txt_filepath = f"{output_dir}/{dataset_name}/{img_name}_gen.txt"
+                shutil.copy(txt_filepath, new_txt_filepath)
+
+        print("\nRandom data augmentation generation done.")

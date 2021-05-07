@@ -1,5 +1,0 @@
-classes = 1
-train  = data/lp_det_txt_files/all_train.txt
-valid  = data/lp_det_txt_files/all_val.txt
-names = data/m_data/obj.names
-backup = backup_lp/0/

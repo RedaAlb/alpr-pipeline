@@ -1,68 +1,67 @@
-import cv2
 import os
 import glob
 import random
 import json
 import time
+import requests
+
+import cv2
 import matplotlib.pyplot as plt
 
 from pycocotools.coco import COCO
-import requests
-
 from collections import Counter
 
-
-# To-do:
-    # Add and make documentation consistent.
 
 class DatasetsUtils:
     """ Provides utility functions to operate on the datasets.
     """
 
-    def __init__(self):
+    def __init__(self, datasets, properties, prop_names):
+        """ Class constructor.
 
-        # All dataset names, which should also be the directory name for each dataset.
-        self.datasets = ["caltech_cars", "english_lp", "open_alpr_eu", "aolp", "ufpr_alpr"]
+        Args:
+            datasets (list): All dataset names, which should also be the directory name for each dataset.
+            properties (list): The properties/labels to excract from the annotations.
+            prop_names (dict): The names of the keys which the labels will be saved in the dictionary for each image. One for each property in 
+                               properties is needed, so {prop_name1: new_name1, prop_name2: new_name2, ...}.
+        """
 
-        # The properties/labels to excract from the annotations.
-        self.properties = ["vehicles", "position_vehicle", "type", "plate", "position_plate"]
-
-        # The names of the keys which the labels will be saved in the dictionary for each image. Note, one for each property in 
-        # properties is needed, so {prop_name1: new_name1, prop_name2: new_name2, ...}.
-        self.prop_names = {"vehicles": "num_vehicles",
-                           "position_vehicle": "v_bb",  # bb refers to bounding box.
-                           "type": "v_type",
-                           "plate": "LP_chars",
-                           "position_plate": "LP_bb"}
-
-        # This is the dataset index of all the datasets that are split into fixed train, val, and test sets, such as ufpr_alpr.
-        self.split_datasets_i = [4]
-
+        self.datasets = datasets
+        self.properties = properties
+        self.prop_names = prop_names
+        
         self.lp_label = 0  # Class label index for LPs.
-        self.lp_chars_labels = ["0","1","2","3","4","5","6","7","8","9",
-                                "A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
+        self.lp_chars_labels = ["0","1","2","3","4","5","6","7","8","9", "A","B","C","D","E","F","G","H",
+                                "I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"]
 
 
-    # TODO: Possible rename to get_all_samples, and all references to "labels".
     def get_all_labels(self, dataset_i=0, print_log=False, subset="", prefix="", return_dict=False):
         """ Excract the needed labels from the annotation (anno) files.
-        
-        Parameters:
-        dataset_i: The dataset index to get the labels to. Chosen from the class datasets variable.
-        print_log: Whether to print the structure of the lines and values (default False).
-        subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
-        return_dict: Whether to return a dict where the key is the img file name, and value is sample data.
-        
+
+        Args:
+            dataset_i (int, optional): The dataset index to get the labels to. Chosen from the class datasets variable. Defaults to 0.
+            print_log (bool, optional): Whether to print the structure of the file lines and values (default False). Defaults to False.
+            subset (str, optional): If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test". Defaults to "".
+            prefix (str, optional): Prefix to the dataset paths. Defaults to "".
+            return_dict (bool, optional): Whether to return a dict where the key is the img file name, and value is sample data. Defaults to False.
+
         Returns:
-        list: All the labels for all the samples in the dataset, where each element is a dict for each sample, with key names
-        according to prop_names, which also includes added keys LP_chars_bb and img_file_name.
+            list: All the labels for all the samples in the dataset, where each element is a dict for each sample, with key names
+            according to prop_names, which also includes added keys LP_chars_bb and img_file_name.
         """
 
         # Please note, all paths are considered relative to this notebook.
         path_to_anno = f"{prefix}annotations/{self.datasets[dataset_i]}/{subset}"  # Path to the directory where all the annotations are stored.
         path_to_imgs = f"{prefix}{self.datasets[dataset_i]}/{subset}"  # Path to the direcotry where all the images are stored.
 
-        anno_file_names = os.listdir(path_to_anno)
+        try:
+            anno_file_names = os.listdir(path_to_anno)
+        except FileNotFoundError:
+            print("The dataset annotations were not found. Please ensure you have the annotations in a directory called \"annotations\". " +
+                  "Please refer to the datasets/README.md file to find out how to obtain the annotations.")
+            return []
+        
+
         img_file_names = os.listdir(path_to_imgs)
         
         all_labels = []  # Will hold all labels for all the samples in the dataset, where each element is a dict.
@@ -74,7 +73,8 @@ class DatasetsUtils:
                 with open(f"{path_to_anno}/{anno_file}", "r") as file:
                     data = file.read()
             except PermissionError as err:
-                print("This dataset is split into fixed train, test, and val sets, please provide an additional argument of\nsubset=\"training|testing|validation\".")
+                if subset != "":
+                    print("This dataset is split into fixed train, test, and val sets, please provide an additional argument of\nsubset=\"training|testing|validation\".")
                 return None
 
             lines = data.replace("\t", "").replace("-","").split("\n")
@@ -132,12 +132,12 @@ class DatasetsUtils:
 
 
     def visualise_dataset(self, dataset_i=0, all_labels=None, subset=""):
-        """ Plots all the images with all of its labels displayed. Use letters 'a' and 'd' to change images.
-        
-        Parameters:
-        dataset_i: The dataset index, chosen from the class datasets variable.
-        all_labels: All the labels for the images, excracted using the get_all_labels() method (default None).
-        subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
+        """ View all the images with all of its labels displayed. Use letters 'a' and 'd' to change images.
+
+        Args:
+            dataset_i (int, optional): The dataset index, chosen from the class datasets variable. Defaults to 0.
+            all_labels (list, optional): All the labels for the images, excracted using the get_all_labels() method. Defaults to None.
+            subset (str, optional): If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test". Defaults to "".
         """
 
         if all_labels is None:
@@ -232,20 +232,19 @@ class DatasetsUtils:
 
 
     def get_all_subset_labels(self, dataset_i, return_dict=False):
-        """ Returns all labels of the dataset regardless if it is split into fixed train, val, test sets or not.
-        
-        If the dataset is split, all subsets will be combined as one dataset.
+        """ Return all labels of the dataset regardless if it is split into fixed train, val, test sets or not.
 
-        Parameters:
-        dataset_i: Dataset index.
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
+            return_dict (bool, optional): Whether to return a dictionary. Defaults to False.
 
         Returns:
-        list: All sample annotations/labels for the dataset.
+            list: All sample annotations/labels for the dataset.
         """
 
-        if dataset_i not in self.split_datasets_i:  # If dataset is not split into train, val, test sets.
-            dataset_labels = self.get_all_labels(dataset_i, return_dict=return_dict)
-        else:
+        dataset_labels = self.get_all_labels(dataset_i, return_dict=return_dict)
+
+        if dataset_labels is None:
             dataset_labels_train = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="training", return_dict=return_dict)
             dataset_labels_val = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="validation", return_dict=return_dict)
             dataset_labels_test = self.get_all_labels(dataset_i=dataset_i, print_log=0, subset="testing", return_dict=return_dict)
@@ -260,7 +259,12 @@ class DatasetsUtils:
         return dataset_labels
 
 
-    def save_all_annos_as_dict(self):
+    def save_all_annos_as_dict(self, file_path=""):
+        """ Save all annotations in a dictionary as a json file.
+
+        Args:
+            file_path (str, optional): Saving path to the json file. Defaults to "".
+        """        
 
         all_annos = {}
 
@@ -268,34 +272,37 @@ class DatasetsUtils:
             annotations = self.get_all_subset_labels(i, return_dict=True)
             all_annos[dataset] = annotations
 
-        file_name = "all_annos.json"
+        if file_path == "":
+            file_path = "all_annos.json"
 
-        with open(file_name, 'w') as file:
+        with open(file_path, 'w') as file:
             json.dump(all_annos, file)
 
-        print(f"All annotations saved in {file_name}.")
+        print(f"All annotations saved in {file_path}.")
+
 
     def get_num_samples(self, dataset_i):
-        """ Returns the number of samples for the dataset.
-        
-        Parameters:
-        dataset_i: Dataset index.
+        """ Get the number of samples for the dataset.
+
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
 
         Returns:
-        int: Number of samples in the dataset.
+            int: Number of samples in the dataset.
         """
 
         dataset_labels = self.get_all_subset_labels(dataset_i)
         return len(dataset_labels)
 
+
     def get_avg_num_veh(self, dataset_i):
-        """ Returns the average # of vehicles in a sample.
-        
-        Parameters:
-        dataset_i: Dataset index.
+        """ Get the average number of vehicles in a dataset.
+
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
 
         Returns:
-        float: Average # of vehicles in a sample.
+            float: Average # of vehicles in a sample.
         """
 
         dataset_labels = self.get_all_subset_labels(dataset_i)
@@ -314,13 +321,13 @@ class DatasetsUtils:
 
     
     def get_char_count(self, dataset_i):
-        """ Returns the number of occurances each character appears in the LP across all dataset samples.
+        """ Get the number of occurances of each character that appears in the LP across all the dataset samples.
 
-        Parameters:
-        dataset_i: Dataset index.
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
 
         Returns:
-        Counter: Each key is a character with the value being the number of occurances.
+            Counter: Each key is a character with the value being the number of occurances.
         """
 
         dataset_labels = self.get_all_subset_labels(dataset_i)
@@ -340,82 +347,19 @@ class DatasetsUtils:
         
         return Counter(licence_plate_chars)
 
-    
-    def check_tf_yolov4_annos(self, imgs_prefix, class_names_file, anno_file):
-        """ Given YOLOv4 TF annotation compatible files, allows to visualise the annotations.
 
-        Parameters:
-        imgs_prefix: The path to all the images.
-        class_names_file: The file containing all class names, where each class is on one line.
-        anno_file: The YOLOv4 annotation file.
+    def check_darknet_yolov4_annos(self, dataset_dir, class_names_file):
+        """ Given YOLOv4 darknet annotation compatible files, visualise the annotations.
+
+        Args:
+            dataset_dir (str): Path to the directory where the images and their corresponding .txt annotation files are located.
+            class_names_file (str): The file containing all class names, where each class is on one line.
         """
 
+        filenames = os.listdir(dataset_dir)
+        n_files = len(filenames)
 
-        with open(class_names_file, "r") as file:
-            names = file.read().split("\n")
-
-        with open(anno_file, "r") as file:
-            samples = file.read().split("\n")
-            
-            for i, line in enumerate(samples):
-                samples[i] = line.split(" ")
-                
-        
-        sample_i = 0
-
-        while True:
-            s1 = samples[sample_i]
-
-            img_path = f"{imgs_prefix}{s1[0]}"
-
-            # print(img_path)
-            img = cv2.imread(img_path)
-            img_h, img_w = img.shape[0], img.shape[1]
-            
-            for i in range(1, len(s1)):
-                sample_values = s1[i].split(",")
-                c = sample_values[0]
-                x, y = float(sample_values[1]), float(sample_values[2])
-                w, h = float(sample_values[3]), float(sample_values[4])
-                # print(i, sample_values, c, x, y, w, h)
-
-                class_name = names[int(c)]
-                
-                bb_w, bb_h = w * img_w, h * img_h
-                bb_x, bb_y = (x * img_w) - (bb_w/2), (y * img_h) - (bb_h/2)
-                
-                cv2.putText(img, class_name, (int(bb_x), int(bb_y - 5)), 1, 1, 255, 2)
-                
-                # print(bb_x, bb_y, bb_w, bb_h)
-                img = cv2.rectangle(img, (int(bb_x), int(bb_y)), (int(bb_x) + int(bb_w), int(bb_y) + int(bb_h)), (255,0,0), 2)
-                
-            
-            cv2.imshow("img", img)
-            
-            key = cv2.waitKey(1)
-
-            # To do: Add constraint to sample_i.
-            if key == ord("q"):
-                break
-            elif key == ord("a"):
-                sample_i -= 1
-            elif key == ord("d"):
-                sample_i += 1
-                
-        cv2.destroyAllWindows()
-
-    def check_darknet_yolov4_annos(self, dataset_dir, class_names_file, imgs_filetype="jpg"):
-        """ Given YOLOv4 darknet annotation compatible files, allows to visualise the annotations.
-
-        Parameters:
-        dataset_dir: Path to the directory where the images and their corresponding .txt annotation files are located.
-        class_names_file: The file containing all class names, where each class is on one line.
-        imgs_filetype: The images file extension/file type (default "jpg").
-        """
-
-        filenames = os.listdir(dataset_dir)  # Includes both .imgs_filetype and .txt files.
-
-        if len(filenames) == 0:
+        if n_files == 0:
             print("No files found.")
             return
 
@@ -425,6 +369,7 @@ class DatasetsUtils:
         
         sample_i = 0
 
+        # Visualising all the images with the annotations using openCV.
         while True:
             img_filename = filenames[sample_i]
             anno_filename = filenames[sample_i + 1]
@@ -453,33 +398,34 @@ class DatasetsUtils:
                 img = cv2.putText(img, class_name, (int(bb_x), int(bb_y - 5)), 1, 1, 255, 2)
                 img = cv2.rectangle(img, (int(bb_x), int(bb_y)), (int(bb_x) + int(bb_w), int(bb_y) + int(bb_h)), (255,0,0), 2)
 
-            cv2.imshow("LP patch", img)
+            cv2.imshow("Sample with annotations", img)
             
             key = cv2.waitKey(1)
 
-            # To do: Add constraint to sample_i.
             if key == ord("q"):
                 break
             elif key == ord("a"):
                 sample_i -= 2
+                if sample_i < 0: sample_i = 0
             elif key == ord("d"):
                 sample_i += 2
-                
+                if sample_i >= n_files: sample_i = n_files - 2
+
         cv2.destroyAllWindows()
     
 
     def generate_lp_det_data(self, dataset_i, save_dir_path, subset="", prefix="", darknet=True):
-        """ Crops the vehicles from the images, saves them in save_dir_path, and creates LP BBs detection annotation file(s) (.txt).
+        """ Crop the vehicles from the images, saves them in save_dir_path, and creates LP BBs detection annotation file(s) (.txt).
 
-        Parameters:
-        dataset_i: Dataset index.
-        save_dir_path: The root folder where the cropped vehicle images to be saved in.
-        subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
-        prefix: Prefix for images directory (default "").
-        darknet: Whether to generate the annotations for the darknet YOLOv4 framework, if False, then for TF framework (default True).
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
+            save_dir_path (str): The root directory where the cropped vehicle images to be saved in.
+            subset (str, optional): If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test". Defaults to "".
+            prefix (str, optional): Prefix for image directory. Defaults to "".
+            darknet (bool, optional): Whether to generate the annotations for the darknet YOLOv4 framework. If False, then for TF framework. Defaults to True.
 
         Returns:
-        str: Annotation file path.
+            str: File path to where the annotation file is saved, only returned if darknet arg is False.
         """
 
 
@@ -489,12 +435,11 @@ class DatasetsUtils:
             dataset_imgs_dir = f"{self.datasets[dataset_i]}/{subset}"
 
         dataset_save_dir_path = f"{save_dir_path}/{dataset_imgs_dir}"
-        # print(dataset_save_dir_path)
-
-        if not os.path.exists(dataset_save_dir_path):
-            os.makedirs(dataset_save_dir_path)
 
         dataset_labels = self.get_all_labels(dataset_i, subset=subset, prefix=prefix)
+
+        if not os.path.exists(dataset_save_dir_path) and dataset_labels != []:
+            os.makedirs(dataset_save_dir_path)
 
         if dataset_labels is None:  # For when a dataset has fixed train, val, and test sets.
             dataset_labels = self.generate_lp_det_data(dataset_i, save_dir_path, subset="training", prefix=prefix, darknet=darknet)
@@ -574,17 +519,16 @@ class DatasetsUtils:
 
 
     def split_dataset(self, path_to_anno_file, train=70, val=20):
-        """ Splits the given annotation file into train, val, test sets using the percentages given, test=whats remaining.
+        """ Split the given annotation file into train, val, test sets using the percentages given, test=whats remaining.
 
-        Paremeters:
-        path_to_anno_file: Path to the .txt file which contains the annotations for each sample.
-        train: Training set percentage (default 70).
-        val: Validation set percentage (default 20).
+        Args:
+            path_to_anno_file (str): Path to the .txt file which contains the annotations for each sample.
+            train (int, optional): Training set percentage. Defaults to 70.
+            val (int, optional): Validation set percentage. Defaults to 20.
 
         Returns:
-        str: File paths to the .txt files for each set.
+            str: File paths to the .txt files for each set.
         """
-
 
         train_anno_file = ""
         val_anno_file = ""
@@ -628,15 +572,15 @@ class DatasetsUtils:
     
 
     def combine_anno_files(self, anno_file_paths, save_path, file_name):
-        """ Combines the given annotation files into one single annotation file.
+        """ Combine the given annotation files into one single annotation file.
 
-        Parameters:
-        anno_file_paths: A list of all the annotation file paths.
-        save_path: Where to save the combined annotation file.
-        file_name: The file name for the combined annotation file.
+        Args:
+            anno_file_paths (list): A list of all the annotation file paths.
+            save_path (str): Where to save the combined annotation file.
+            file_name (str): The file name for the combined annotation file.
 
         Returns:
-        str: The combined annotation file path.
+            str: File path to the combined annotations.
         """
 
         combined_annos_str = ""
@@ -655,15 +599,15 @@ class DatasetsUtils:
         
         return file_path
 
-    def remove_txt_files(self, file_names):
-        """ Removes .txt files from the given file_names list.
 
-        Paremeters:
-        file_names: A list of file_names.
+    def remove_txt_files(self, file_names):
+        """ Remove .txt files from the given file_names list.
+
+        Args:
+            file_names (list): A list of all file names.
 
         Returns:
-        list: A list of all file names given with all .txt files removed from the list.
-
+            list: A list of all file names given with all .txt files removed from the list.
         """
 
         for file_name in file_names:
@@ -671,28 +615,28 @@ class DatasetsUtils:
                 file_names.remove(file_name)
 
         return file_names
-    
+
+
     def gen_dataset_split_files(self, dataset_i, imgs_root, imgs_prefix, train=70, val=20, seed=2):
-        """ Generates train.txt, val.txt, test.txt for the given dataset, and saves them in save_dir, to be used with YOLOv4.
+        """ Generate train.txt, val.txt, test.txt for the given dataset, and save them in save_dir, to be used with YOLOv4.
 
-        Parameters:
-        dataset_i: Dataset index, or for COCO dataset, it will be the name.
-        imgs_root: The root directory for all the images for all datasets, not only for the given dataset.
-        imgs_prefix: Prefix for each image file name, (the relative path to the split .txt files from wherever they will be used from).
-        train: Training set percentage (default 70).
-        val: Validation set percentage (default 20).
-        seed: The seed used to shuffle the samples before the split is happened (default 2).
-
+        Args:
+            dataset_i (int/str): The dataset index, chosen from the class datasets variable. For COCO, use same as your coco dir, e.g. "coco".
+            imgs_root (str): The root/parent directory of the dataset(s).
+            imgs_prefix (str): Prefix for each image file name, (the relative path to the split .txt files from wherever they will be used from).
+            train (int, optional): Training set percentage. Defaults to 70.
+            val (int, optional): Validation set percentage. Defaults to 20.
+            seed (int, optional): The seed used to shuffle the samples before the split is happened. Defaults to 2.
         """
+
 
         if type(dataset_i) != str:  # For the ALPR datasets.
             dataset_name = self.datasets[dataset_i]
-            dataset_path = f"{imgs_root}/{dataset_name}"
-            img_file_names = os.listdir(f"{dataset_path}")
         else:  # For coco downloaded dataset.
             dataset_name = dataset_i
-            dataset_path = f"{imgs_root}/{dataset_name}"
-            img_file_names = os.listdir(f"{dataset_path}")
+
+        dataset_path = f"{imgs_root}/{dataset_name}"
+        img_file_names = os.listdir(f"{dataset_path}")
 
         # For when the dataset is split into fixed train, val, and test sets, in that case, img_file_names will return
         # ["training", "validation", "testing"].
@@ -758,10 +702,10 @@ class DatasetsUtils:
 
     
     def combine_subsets(self, sets_dir_path):
-        """ Combines train, val, and test sets of all datasets into three large subsets.
+        """ Combine train, val, and test sets of all datasets into three large subsets.
 
-        Parameters:
-        sets_dir_path: Where the individual subset .txt files are contained for all datasets. 
+        Args:
+            sets_dir_path (str): Where the individual subset .txt files are contained for all datasets.
         """
 
         file_paths = glob.glob(f"{sets_dir_path}/*.txt")
@@ -821,25 +765,24 @@ class DatasetsUtils:
         
         print(f"All subsets combined successfully, files_saved:\n{all_train_path}\n{all_val_path}\n{all_test_path}")
 
-    
-    def generate_lp_rec_data(self, dataset_i, save_dir_path, subset="", prefix="", negative_imgs=False, same_ratio=False, darknet=True, process=False):
-        """ Crops the LPs from the vehicle cropped images, saves them in save_dir_path, and creates LP chars BBs detection annotation file(s) (.txt).
 
-        Parameters:
-        dataset_i: Dataset index.
-        save_dir_path: The root folder where the cropped LP images to be saved in.
-        subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
-        prefix: Prefix for images directory (default "").
-        negative_imgs: Whether to create negative images of each LP patch and save it as an additional sample. This will double the # of samples.
-        same_ratio: Whether to make all LP patches have the same aspect ratio (w/h) of 2.859, which is the average across all datasets.
-        darknet: Whether to generate the annotations for the darknet YOLOv4 framework, if False, then for TF framework (default True).
-        process: Whether to apply preprocessing to the LP patch.
+    def generate_lp_rec_data(self, dataset_i, save_dir_path, subset="", prefix="", negative_imgs=False, same_ratio=False, img_ratio=2.859, darknet=True, process=False):
+        """ Crop the LPs from the vehicle cropped images, save them in save_dir_path, and create LP chars BBs detection annotation file(s) (.txt).
 
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
+            save_dir_path (str): The root folder where the cropped LP images to be saved in.
+            subset (str, optional): If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test". Defaults to "".
+            prefix (str, optional): Prefix for image directory. Defaults to "".
+            negative_imgs (bool, optional): Create negative images of each LP patch and save it as an additional sample. Defaults to False.
+            same_ratio (bool, optional): Make all LP patches have the same aspect ratio (w/h) of img_ratio. Defaults to False.
+            img_ratio (float, optional): The required image ratio, suggested to be average of all datasets. Defaults to 2.859.
+            darknet (bool, optional): Whether to generate the annotations for the darknet YOLOv4 framework. If False, then for TF framework. Defaults to True.
+            process (bool, optional): Whether to apply preprocessing to the LP patch (apply lp_patch_preprocessing() on all imgs). Defaults to False.
 
         Returns:
-        str: Annotation file path.
+            str: File path to where the annotation file is saved, only returned if darknet arg is False.
         """
-
 
         if subset == "":
             dataset_imgs_dir = self.datasets[dataset_i]
@@ -847,28 +790,30 @@ class DatasetsUtils:
             dataset_imgs_dir = f"{self.datasets[dataset_i]}/{subset}"
 
         dataset_save_dir_path = f"{save_dir_path}/{dataset_imgs_dir}"
-        # print(dataset_save_dir_path)
-
-        if not os.path.exists(dataset_save_dir_path):
-            os.makedirs(dataset_save_dir_path)
 
         dataset_labels = self.get_all_labels(dataset_i, subset=subset, prefix=prefix)
+
+        if not os.path.exists(dataset_save_dir_path) and dataset_labels != []:
+            os.makedirs(dataset_save_dir_path)
 
         if dataset_labels is None:  # For when a dataset has fixed train, val, and test sets.
             sets = ["training", "validation", "testing"]
             for subset in sets:
-                _ = self.generate_lp_rec_data(dataset_i, save_dir_path, subset=subset, prefix=prefix, negative_imgs=negative_imgs, same_ratio=same_ratio, darknet=darknet, process=process)
+                _ = self.generate_lp_rec_data(dataset_i,
+                                              save_dir_path,
+                                              subset=subset,
+                                              prefix=prefix,
+                                              negative_imgs=negative_imgs,
+                                              same_ratio=same_ratio,
+                                              img_ratio=img_ratio,
+                                              darknet=darknet,
+                                              process=process)
 
             return
-
-        
-        if same_ratio: AVG_RATIO = 2.859  # Average (w/h) ratio across all datasets.
 
         anno_str = ""  # Will hold final annotation file content(string).
         
         for sample in dataset_labels:
-
-            # print(sample)
 
             try: num_vehicles = sample["num_vehicles"][0]
             except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
@@ -901,9 +846,9 @@ class DatasetsUtils:
 
                 if same_ratio:
                     ratio = lp_w / lp_h
-                    extra_ratio = ratio / AVG_RATIO
+                    extra_ratio = ratio / img_ratio
 
-                    if ratio >= AVG_RATIO:
+                    if ratio >= img_ratio:
                         new_height = lp_h * extra_ratio
                         lp_y -= round(new_height / 4)
                         if lp_y < 0: lp_y = 0  # If out of bound.
@@ -992,10 +937,13 @@ class DatasetsUtils:
 
 
     def lp_patch_preprocessing(self, lp_patch):
-        """ Used to apply preprocessing to LP patches to double the dataset for LP recognition.
+        """ Apply preprocessing to LP patches.
 
-        Parameters:
-        lp_patch: The image of the LP patch.
+        Args:
+            lp_patch (numpy.ndarray): The image of the LP patch.
+
+        Returns:
+            numpy.ndarray: Processed LP patch.
         """
 
         lp_patch = cv2.cvtColor(lp_patch, cv2.COLOR_BGR2GRAY)
@@ -1004,20 +952,19 @@ class DatasetsUtils:
 
 
     def generate_v_det_data(self, dataset_i, save_dir_path, subset="", prefix="", darknet=True, blur_bg=False):
-        """ Creates vehicle BBs detection annotation files (.txt).
+        """ Create vehicle BBs detection annotation files (.txt).
 
-        Parameters:
-        dataset_i: Dataset index.
-        save_dir_path: The root folder where the vehicle images is to be saved in.
-        subset: If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test" (default "").
-        prefix: Prefix for images directory (default "").
-        darknet: Whether to generate the annotations for the darknet YOLOv4 framework, if False, then for TF framework (default True).
-        blur_bg: Blur the BG and keep the vehicle patches as they are.
+        Args:
+            dataset_i (int): The dataset index, chosen from the class datasets variable.
+            save_dir_path (str): The root folder where the vehicle images is to be saved in.
+            subset (str, optional): If a dataset has a fixed train, val, test sets, specify which subset, "train", "val", "test". Defaults to "".
+            prefix (str, optional): Prefix for image directory. Defaults to "".
+            darknet (bool, optional): Whether to generate the annotations for the darknet YOLOv4 framework. If False, then for TF framework. Defaults to True.
+            blur_bg (bool, optional): Blur the BG and keep the vehicle patches as they are. Defaults to False.
 
         Returns:
-        str: Annotation file path.
+            str: File path to where the annotation file is saved, only returned if darknet arg is False.
         """
-
 
         if subset == "":
             dataset_imgs_dir = self.datasets[dataset_i]
@@ -1027,10 +974,10 @@ class DatasetsUtils:
         dataset_save_dir_path = f"{save_dir_path}/{dataset_imgs_dir}"
         # print(dataset_save_dir_path)
 
-        if not os.path.exists(dataset_save_dir_path):
-            os.makedirs(dataset_save_dir_path)
-
         dataset_labels = self.get_all_labels(dataset_i, subset=subset, prefix=prefix)
+
+        if not os.path.exists(dataset_save_dir_path) and dataset_labels != []:
+            os.makedirs(dataset_save_dir_path)
 
         if dataset_labels is None:  # For when a dataset has fixed train, val, and test sets.
             dataset_labels = self.generate_v_det_data(dataset_i, save_dir_path, subset="training", prefix=prefix, darknet=darknet, blur_bg=blur_bg)
@@ -1104,22 +1051,23 @@ class DatasetsUtils:
             
             return anno_file_path
     
-    def save_blurred_sample(self, img_save_path, img, sample):
+    def save_blurred_sample(self, img_save_path, img, sample_anno):
         """ Save the sample with the BG blurred and only the vehicle patches original.
 
         Args:
-            img_save_path (str): Saving path for the img.
+            img_save_path (str): Saving path for the image.
             img (numpy.ndarray): The sample image.
-            sample (list): Sample data.
+            sample_anno (list): Sample annotation data.
         """
 
-        try: num_vehicles = sample["num_vehicles"][0]
+
+        try: num_vehicles = sample_anno["num_vehicles"][0]
         except KeyError: num_vehicles = 1  # When no annotation is found, # of vehicles is one.
 
         blurred_img = cv2.GaussianBlur(img, (71, 71), 0)
 
         for i in range(num_vehicles):
-            v_bb = sample["v_bb"][i]
+            v_bb = sample_anno["v_bb"][i]
             v_x, v_y = v_bb[0], v_bb[1]
             v_w, v_h = v_bb[2], v_bb[3]
 
@@ -1130,9 +1078,14 @@ class DatasetsUtils:
         cv2.imwrite(img_save_path, blurred_img)
 
 
-    
     def download_coco(self, anno_file, class_names, dir_name, num_samples=5):
-        """ Downloads given COCO class names samples and creates YOLO compatible annotation files.
+        """ Download given COCO class names samples and create YOLO compatible annotation files.
+
+        Args:
+            anno_file (file): The COCO annotation file.
+            class_names (list): The class names to be downloaded.
+            dir_name (str): Save directory name.
+            num_samples (int, optional): Number of samples to download. Defaults to 5.
         """
 
         try: coco = COCO(anno_file)
@@ -1222,10 +1175,8 @@ class DatasetsUtils:
 
                     class_label = class_ids.index(class_id)
 
-                    # mystring = str(f"{class_label} " + str(truncate(x, 7)) + " " + str(truncate(y, 7)) + " " + str(truncate(w, 7)) + " " + str(truncate(h, 7)))
                     mystring = f"{class_label} {x} {y} {w} {h}\n"
                     myfile.write(mystring)
-
 
             myfile.close()
 
@@ -1236,6 +1187,3 @@ class DatasetsUtils:
                 break
 
         print("Finished downloading all images and creating annotation files for", class_names, "classes in\n", save_dir)
-
-
-

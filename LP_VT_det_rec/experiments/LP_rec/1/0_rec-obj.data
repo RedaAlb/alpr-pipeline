@@ -1,5 +1,0 @@
-classes = 36
-train  = data/lp_rec_txt_files/all_train.txt
-valid  = data/lp_rec_txt_files/all_val.txt
-names = data/m_data/lp_rec_obj.names
-backup = backup_char/1/

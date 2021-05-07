@@ -1,1 +1,0 @@
-Place all downloaded model weights in this directory.
