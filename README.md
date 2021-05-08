@@ -2,26 +2,18 @@
 
 Please note, this repo is still in early stages and will be finalised when concrete outcomes are achieved.
 
+This readme is to be updated.
+
 ## Project outline.
 
-This is a project that I am undertaking as a research associate at the University of Westminster.
-
-This project involves two main components:
-
-1. Detection and recognition of:
-    1. Indian Licence plates (LP)
-    1. Vehicle types (VT)
-1. Public transportation recommendation tool (TRT)
-
-At this current time and state, the project is solely focused on the first part.
+This is a project that I am undertaking as a research associate at the University of Westminster. It involves creating an automatic number-plate recognition (ALPR) system. It is split into three main stages, vehicle detection (VD), licence plate detection (LPD) and LP recognition (LPR). A vehicle classifier is also made to classify the detected vehicles into trucks and emergency vehicles.
 
 
-
-## 1. For LP and VT detection and recognition
+## For VD/LP detection and recognition
 
 Please refer to the `\LP_VT_det_rec` directory.
 
 
-## 2. For TRT
+## For vehicle type classification (VTC)
 
-To be added.
+Please refer to the `\vtc` directory.

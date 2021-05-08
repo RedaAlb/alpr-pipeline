@@ -1,17 +1,8 @@
 .vscode
 __pycache__
 .ipynb_checkpoints
-yolov4.weights
-yolov4-tiny.weights
-yolov4-tiny-relu.weights
-yolov3.weights
-yolov3_model.h5
-LP_VT_det_rec/yolov3/yolov3_ml_space/weights
 vcpkg
 checkpoints
-variables
-saved_model.pb
-LP_VT_det_rec/yolov4/test/dataset/val2017/*
 LP_VT_det_rec/datasets/annotations/
 LP_VT_det_rec/datasets/aolp/
 LP_VT_det_rec/datasets/caltech_cars/
@@ -24,8 +15,6 @@ LP_VT_det_rec/datasets/indian/
 LP_VT_det_rec/datasets/rename_files.py
 LP_VT_det_rec/darknet/darknet/*
 !LP_VT_det_rec/darknet/README.md
-LP_VT_det_rec/yolov4/test/logs
-LP_VT_det_rec/yolov4/test/saved_weights
 LP_VT_det_rec/datasets/vehicles_cropped
 LP_VT_det_rec/datasets/vehicles_cropped_ucsd
 LP_VT_det_rec/datasets/vehicles_cropped_ucsd_mania
@@ -47,3 +36,7 @@ LP_VT_det_rec/datasets/lps_cropped_gen
 LP_VT_det_rec/datasets/lps_cropped_perm
 LP_VT_det_rec/datasets/lps_cropped_ucsd
 LP_VT_det_rec/datasets/lps_cropped_ucsd_mania
+vtc/datasets/*
+!vtc/datasets/README.md
+vtc/saved_models/*
+!vtc/saved_models/README.md
