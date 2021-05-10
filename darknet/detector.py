@@ -7,12 +7,16 @@ class Detector:
     """ Used to create YOLO detectors to be easily used.
     """
 
-    def __init__(self,
-                 config_file,
-                 data_file,
-                 weights_file,
-                 thresh,
-                 batch_size=1):
+    def __init__(self, config_file, data_file, weights_file, thresh, batch_size=1):
+        """ Class constructor.
+
+        Args:
+            config_file (str): Path to the .cfg file for the darknet yolo detector.
+            data_file (str): Path to the .data file for the darknet yolo detector.
+            weights_file (str): Path to the .weights file for the darknet yolo detector.
+            thresh (float): Detection threshold.
+            batch_size (int, optional): The batch size. Defaults to 1.
+        """
 
         self.config_file = config_file
         self.data_file = data_file
@@ -46,7 +50,9 @@ class Detector:
                                    interpolation=cv2.INTER_LINEAR)
 
         darknet.copy_image_from_bytes(self.darknet_image, frame_resized.tobytes())
+
         return frame_resized
+
 
     def detect(self, frame, print_detections=False):
         """ Detect objects in the frame using the detector.
@@ -134,8 +140,9 @@ class Detector:
             org_frame_detections.append(org_frame_det)
 
         return org_frame_detections
-    
-    def get_detection_patches(self, detections, frame, min_w, min_h, limit_classes=False, classes=[], get_highest_conf=False):
+
+
+    def get_detection_patches(self, detections, frame, min_w, min_h, limit_classes=False, classes=[], get_highest_conf=False, same_ratio=False, avg_ratio=2.859):   
         """ Get the detected BBs patches by cropping them from the frame.
 
         Args:
@@ -146,9 +153,11 @@ class Detector:
             limit_classes (bool, optional): Limit the classes to be detected by using classes names. Defaults to False.
             classes (list, optional): List of strings, the classes you want to limit the detection to. Defaults to [].
             get_highest_conf (bool, optional): Return only the highest confidence score detection. Defaults to False.
-
+            same_ratio (bool, optional): Keep all patches to an equal ratio. Used only for LP recognition stage. Defaults to False.
+            avg_ratio (float, optional): Average (w/h) ratio across all datasets, only used if same_ratio is True. Defaults to 2.859.
+            
         Returns:
-            numpy.ndarray/list: The cropped patch(s).
+            tuple/list: The cropped patch(s) in this format (patch, top_l_corner_x, top_l_corner_y). A list if get_highest_conf is False.
         """
 
         patches = []
@@ -176,6 +185,25 @@ class Detector:
             if top_l_corner_y < 0: top_l_corner_y = 0
             if top_l_corner_x < 0: top_l_corner_x = 0
 
+
+            if same_ratio:
+                ratio = bb_w / bb_h
+                extra_ratio = ratio / avg_ratio
+
+                if ratio >= avg_ratio:
+                    new_height = bb_h * extra_ratio
+                    top_l_corner_y -= round(new_height / 4)
+                    if top_l_corner_y < 0: top_l_corner_y = 0  # If out of bound.
+
+                    bb_h += round(new_height / 2)
+                else:
+                    new_width = bb_w * extra_ratio
+                    top_l_corner_x -= round(new_width / 4)
+                    if top_l_corner_x < 0: top_l_corner_x = 0
+
+                    bb_w += round(new_width / 2)
+
+
             patch = frame[top_l_corner_y:top_l_corner_y+bb_h, top_l_corner_x:top_l_corner_x+bb_w]
 
             patches.append((patch, top_l_corner_x, top_l_corner_y))
@@ -183,10 +211,6 @@ class Detector:
             if get_highest_conf and conf > max_conf:
                 max_conf = conf
                 best_patch = (patch, top_l_corner_x, top_l_corner_y)
-
-        
-        # Possibly add histogram intersection here to ensure the same vehicle is not detected multiple times/twice?
-        # Or is there a much simpler way to do that.
 
         if get_highest_conf: return best_patch
         else: return patches
@@ -200,7 +224,7 @@ class Detector:
             min_bottom_chars (int, optional): Minimum num of chars needed to be below 1st char to count LP as two rows. Defaults to 2.
 
         Returns:
-            str: The text of the full LP detected, combined detected characters in the correct order.
+            str: The text of the full LP detected (combined detected characters in the correct order).
         """
 
         # Determining the most top left character of the LP (the first character).
@@ -229,10 +253,10 @@ class Detector:
             lp_chars_sorted = [det[0] for det in sorted(detections, key=lambda det: det[2][0])]
             return "".join(lp_chars_sorted)
 
-        else:  # Two rows LP
+        # Two rows LP
+        else:
             # Sorting the characters by the y value, then finding the peak of the y values which will be the start of the second row.
             detections = sorted(detections, key=lambda det: det[2][1])
-
 
             y_peak = -1
             y_peak_i = -1

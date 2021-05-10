@@ -2,11 +2,22 @@ import json
 import os
 import cv2
 
+
 class Evaluator:
     """ Evaluate each stage of the ALPR pipeline, vehicle detection, LP detection, LP recognition.
     """
 
     def __init__(self, all_annos_file, save_v_det_wrong, save_lp_det_wrong, save_lp_rec_wrong, v_det_thresh, lp_det_thresh):
+        """ Class constructor.
+
+        Args:
+            all_annos_file (str): Get this json file from using the DatasetsUtils.save_all_annos_as_dict() function.
+            save_v_det_wrong (bool): Save the wrong samples where the vehicle detection was wrong.
+            save_lp_det_wrong (bool): Save the wrong samples where the licence plate detection was wrong.
+            save_lp_rec_wrong (bool): Save the wrong samples where the licence plate recognition was wrong.
+            v_det_thresh ([type]): Vehicle detection threshold.
+            lp_det_thresh ([type]): License plate (lp) detection threshold.
+        """
 
         self.all_annos_file = all_annos_file
         self.save_v_det_wrong = save_v_det_wrong
@@ -40,6 +51,7 @@ class Evaluator:
         # Making the directories where the wrong samples images will be saved to.
         self.make_dirs()
 
+
     def load_annos(self, annos_file):
         """ Load the annotations file.
 
@@ -56,6 +68,7 @@ class Evaluator:
                 value = self.all_annos[key]
                 self.all_annos.update(value)
                 del self.all_annos[key]
+
 
     def make_dirs(self):
         """ Make directories for the wrong samples images.
@@ -78,7 +91,7 @@ class Evaluator:
             img_file_path (str): The relative path to the image to be evaluated.
             img_file_name (str): The image file name (with the extension).
             v_detections (list): All vehicles detected in YOLO format (class, conf, [x, y, w, h]).
-            save_v_det_wrong (bool): Whether to save the wrong samples where the vehcile(s) was not detected.
+            save_v_det_wrong (bool): Whether to save the wrong samples where the vehicles(s) was not detected.
             frame (numpy.ndarray): The sample frame/image, used to save when a vehicle is not detected.
         """
 
@@ -147,7 +160,7 @@ class Evaluator:
                 if self.save_lp_det_wrong and img_file_path not in self.v_det_wrong_samples:
                     cv2.imwrite(f"{self.lp_det_wrong_dir}/{img_file_name}", frame)
 
-    
+
     def eval_lps_rec(self, img_file_path, img_file_name, lp_recs, frame):
         """ Evaluate the LP text recognised in the frame.
 
@@ -169,13 +182,20 @@ class Evaluator:
                         gt_lp_text = gt_lp_text.replace("-", "")  # In case a space is represented by a "-".
                     except AttributeError: pass  # When the LP text is all numbers.
 
-
                     if lp == gt_lp_text:
                         self.lp_rec_tp += 1
+
+                        # with open("_ufpr_vid.txt", "a") as file:
+                        #     file.write(f"{img_file_name} 1\n")
+
                         del gt_lps_text[i]
 
             remaining_gt_texts = len(gt_lps_text)
             if remaining_gt_texts != 0:
+
+                # with open("_ufpr_vid.txt", "a") as file:
+                #     file.write(f"{img_file_name} 0\n")
+
                 self.lp_rec_fn += remaining_gt_texts
                 self.lp_rec_wrong_samples.append(img_file_path)
 
@@ -208,6 +228,7 @@ class Evaluator:
 
         return I / U
 
+
     def add_done_sample(self, img_file_name, img_index, print_sample_eval):
         """ Mark a sample done so it does not get evaluated twice.
 
@@ -219,10 +240,11 @@ class Evaluator:
 
         if img_file_name not in self.samples_evaluated:
             self.samples_evaluated.append(img_file_name)
-            print(f"Finished evaluating image #{img_index}, total evluated: {len(self.samples_evaluated)}")
+            print(f"Finished evaluating image #{img_index}, total evaluated: {len(self.samples_evaluated)}")
 
             if print_sample_eval:
                 self.print_eval_results()
+
 
     def print_eval_results(self):
         """ Print a summary of the evaluation for each stage of the pipeline.
@@ -245,6 +267,7 @@ class Evaluator:
         print(f"Vehicle detection\t{self.v_det_tp}\t{self.v_det_fn}\t{total_v_det}\t{v_det_recall}")
         print(f"LP detection     \t{self.lp_det_tp}\t{self.lp_det_fn}\t{total_lp_det}\t{lp_det_recall}")
         print(f"LP recognition   \t{self.lp_rec_tp}\t{self.lp_rec_fn}\t{total_lp_rec}\t{lp_rec_recall}")
+
 
     def save_to_file(self, saving_dir, data):
         """ Save data to file .txt file.
