@@ -5,7 +5,7 @@ This is a project that I undertook as a research associate at the University of 
 
 # Paper
 
-There is a paper associated with this project, which will be shared here when it is finalised.
+There is a draft paper associated with this project, please refer to `paper.pdf`.
 
 ## Abstract
 

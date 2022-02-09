@@ -2,8 +2,7 @@
 
 The table below summarieses all the datasets used. To obtain any of the datasets, use the corresponding link.
 
-- `/annotations`, contains the annotations for each dataset. I am not permitted to upload/share the annotations as they were obtained from Rayson Laroca, one of the authors of this [paper]
-(https://arxiv.org/abs/1909.01754), and is only available upon request directly from the author(s) of the paper, however, some datasets include the annotations when downloaded.
+- `/annotations`, contains the annotations for each dataset. I am not permitted to upload/share the annotations as they were obtained from Rayson Laroca, one of the authors of this [paper](https://arxiv.org/abs/1909.01754), and is only available upon request directly from the author(s) of the paper, however, some datasets include the annotations when downloaded.
 - `/class_names`, contains the class names used.
 - `visualise_dataset.ipynb`, used to visualise and check the datasets with the image annotations/labels.
 - `datasets_utils.py`, provides utility functions to operate on the datasets.
